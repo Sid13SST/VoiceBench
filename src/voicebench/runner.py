@@ -1,0 +1,126 @@
+"""Run every scenario through ASR and scoring, and save a run file."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+from voicebench.asr import WHISPER_LANGUAGE_HINT, ASRUnavailable, Transcript
+from voicebench.loader import file_sha256
+from voicebench.schema import ResultSource, RunManifest, Scenario
+from voicebench.scoring import failed, score
+
+LANGUAGE_POLICIES = ("auto", "hint")
+
+
+class ReferenceTranscriber:
+    """Returns the reference text as the 'transcript'.
+
+    Not an ASR model: it checks the pipeline end to end and shows what the
+    matcher does with perfect text. Its runs are recorded with
+    asr_model="oracle-reference".
+    """
+
+    name = "oracle-reference"
+
+    def describe(self) -> dict[str, Any]:
+        return {"name": self.name, "backend": "none"}
+
+    def transcribe_scenario(self, scenario: Scenario) -> Transcript:
+        return Transcript(
+            text=scenario.reference, model=self.name, detected_language=None,
+            language_probability=None, requested_language=None, latency_ms=0.0, audio_duration_s=0.0,
+        )
+
+
+def git_commit(repo: Path) -> Optional[str]:
+    try:
+        sha = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "-C", str(repo), "status", "--porcelain", "--untracked-files=no"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return f"{sha}-dirty" if dirty else sha
+
+
+def run(
+    scenarios: list[Scenario],
+    audio_dir: str | Path,
+    transcriber: Any,
+    scenarios_file: str,
+    command: str,
+    source: ResultSource = ResultSource.MEASURED,
+    language_policy: str = "auto",
+    progress: Optional[Callable[[str], None]] = None,
+) -> RunManifest:
+    if language_policy not in LANGUAGE_POLICIES:
+        raise ValueError(f"language_policy must be one of {LANGUAGE_POLICIES}")
+    audio_dir = Path(audio_dir)
+    audio_manifest_path = audio_dir / "manifest.json"
+    audio_manifest = json.loads(audio_manifest_path.read_text(encoding="utf-8")) if audio_manifest_path.exists() else {}
+
+    results = []
+    for s in scenarios:
+        wav = audio_dir / f"{s.id}.wav"
+        language = WHISPER_LANGUAGE_HINT[s.language.value] if language_policy == "hint" else None
+        try:
+            if hasattr(transcriber, "transcribe_scenario"):
+                t = transcriber.transcribe_scenario(s)
+            else:
+                if not wav.exists():
+                    raise FileNotFoundError(f"missing audio {wav}")
+                t = transcriber.transcribe_file(wav, language=language)
+        except ASRUnavailable:
+            raise  # the whole run is impossible; don't write 50 identical failures
+        except Exception as exc:  # one bad file should not sink the run
+            results.append(failed(s, source, f"{type(exc).__name__}: {exc}"))
+        else:
+            results.append(
+                score(
+                    s, t.text, source,
+                    latency_ms=t.latency_ms if t.audio_duration_s else None,
+                    audio_duration_s=t.audio_duration_s or None,
+                    detected_language=t.detected_language or t.requested_language,
+                )
+            )
+        if progress:
+            r = results[-1]
+            progress(f"{s.id} {'PASS' if r.task_success else 'FAIL'} {r.transcript or r.error or ''}")
+
+    desc = transcriber.describe()
+    created = datetime.now(timezone.utc)
+    return RunManifest(
+        run_id=f"{created:%Y%m%dT%H%M%SZ}-{desc['name'].replace('/', '-')}-{language_policy}",
+        created_at=created,
+        source=source,
+        command=command,
+        git_commit=git_commit(Path(scenarios_file).resolve().parent),
+        scenarios_file=scenarios_file,
+        scenarios_sha256=file_sha256(scenarios_file),
+        asr_model=desc["name"],
+        asr_model_version=desc.get("backend_version"),
+        asr_config=desc,
+        language_policy=language_policy,
+        device=desc.get("device"),
+        tts_engine=audio_manifest.get("tts_engine"),
+        results=results,
+    )
+
+
+def save(manifest: RunManifest, out_dir: str | Path) -> Path:
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{manifest.run_id}.json"
+    path.write_text(manifest.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def load_run(path: str | Path) -> RunManifest:
+    return RunManifest.model_validate_json(Path(path).read_text(encoding="utf-8"))
