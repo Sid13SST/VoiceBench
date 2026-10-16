@@ -59,6 +59,41 @@ def _cmd_transcribe(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_run(args: argparse.Namespace) -> int:
+    from voicebench.asr import ASRUnavailable, FasterWhisperTranscriber
+    from voicebench.report import format_table, summarise
+    from voicebench.runner import ReferenceTranscriber, run, save
+
+    scenarios = load_scenarios(args.scenarios)
+    if args.asr == "oracle":
+        transcriber = ReferenceTranscriber()
+    else:
+        transcriber = FasterWhisperTranscriber(args.model, local_files_only=args.offline)
+    command = " ".join(["voicebench", *sys.argv[1:]]) if args.command is None else args.command
+    try:
+        manifest = run(
+            scenarios, args.audio, transcriber, args.scenarios, command,
+            language_policy=args.language_policy,
+            progress=(lambda m: print(m, file=sys.stderr)) if args.verbose else None,
+        )
+    except ASRUnavailable as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    path = save(manifest, args.out)
+    print(format_table(summarise(manifest, scenarios)))
+    print(f"saved {path}")
+    return 0
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    from voicebench.report import format_table, summarise
+    from voicebench.runner import load_run
+
+    run = load_run(args.run)
+    print(format_table(summarise(run, load_scenarios(run.scenarios_file))))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="voicebench")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -78,6 +113,22 @@ def main(argv: list[str] | None = None) -> int:
     p_tr.add_argument("--language", default=None, help="Whisper language code; default auto-detect")
     p_tr.add_argument("--offline", action="store_true", help="never try to download weights")
     p_tr.set_defaults(func=_cmd_transcribe)
+
+    p_run = sub.add_parser("run", help="run all scenarios through ASR + scoring and save results")
+    p_run.add_argument("--scenarios", default="scenarios/v1.jsonl")
+    p_run.add_argument("--audio", default="audio/v1")
+    p_run.add_argument("--asr", choices=["faster-whisper", "oracle"], default="faster-whisper")
+    p_run.add_argument("--model", default="small", help="Whisper model name or local CTranslate2 dir")
+    p_run.add_argument("--language-policy", choices=["auto", "hint"], default="auto")
+    p_run.add_argument("--offline", action="store_true", help="never try to download weights")
+    p_run.add_argument("--out", default="results")
+    p_run.add_argument("--command", default=None, help=argparse.SUPPRESS)
+    p_run.add_argument("-v", "--verbose", action="store_true")
+    p_run.set_defaults(func=_cmd_run)
+
+    p_rep = sub.add_parser("report", help="print the breakdown of a saved run")
+    p_rep.add_argument("run")
+    p_rep.set_defaults(func=_cmd_report)
 
     args = parser.parse_args(argv)
     return args.func(args)
