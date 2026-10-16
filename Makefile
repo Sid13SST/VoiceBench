@@ -7,7 +7,7 @@ PY := $(VENV)/bin/python
 setup:
 	$(PYTHON) -m venv $(VENV)
 	$(PY) -m pip install --upgrade pip
-	$(PY) -m pip install -e ".[dev]"
+	$(PY) -m pip install -e ".[dev,asr]"
 
 test:
 	$(PY) -m pytest

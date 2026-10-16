@@ -45,6 +45,20 @@ def _cmd_synth(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_transcribe(args: argparse.Namespace) -> int:
+    from voicebench.asr import ASRUnavailable, FasterWhisperTranscriber
+
+    asr = FasterWhisperTranscriber(args.model, local_files_only=args.offline)
+    try:
+        for path in args.wav:
+            t = asr.transcribe_file(path, language=args.language)
+            print(f"{path}\t[{t.detected_language}, {t.latency_ms:.0f} ms]\t{t.text}")
+    except ASRUnavailable as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="voicebench")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -57,6 +71,13 @@ def main(argv: list[str] | None = None) -> int:
     p_synth.add_argument("path")
     p_synth.add_argument("--out", required=True)
     p_synth.set_defaults(func=_cmd_synth)
+
+    p_tr = sub.add_parser("transcribe", help="transcribe WAV files with a local Whisper model")
+    p_tr.add_argument("wav", nargs="+")
+    p_tr.add_argument("--model", default="small", help="model name or local CTranslate2 directory")
+    p_tr.add_argument("--language", default=None, help="Whisper language code; default auto-detect")
+    p_tr.add_argument("--offline", action="store_true", help="never try to download weights")
+    p_tr.set_defaults(func=_cmd_transcribe)
 
     args = parser.parse_args(argv)
     return args.func(args)
