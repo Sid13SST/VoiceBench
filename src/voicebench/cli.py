@@ -26,6 +26,25 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_synth(args: argparse.Namespace) -> int:
+    from voicebench.audio.build import build_all
+    from voicebench.audio.tts import EspeakTTS, TTSUnavailable
+
+    scenarios = load_scenarios(args.path)
+    command = f"voicebench synth {args.path} --out {args.out}"
+    try:
+        manifest = build_all(
+            scenarios, args.out, EspeakTTS(),
+            scenarios_file=args.path, scenarios_sha256=file_sha256(args.path), command=command,
+        )
+    except TTSUnavailable as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    total = sum(f["duration_s"] for f in manifest["files"])
+    print(f"wrote {len(manifest['files'])} files ({total:.1f} s of audio) to {args.out} with {manifest['tts_engine']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="voicebench")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -33,6 +52,11 @@ def main(argv: list[str] | None = None) -> int:
     p_validate = sub.add_parser("validate", help="validate a scenario JSONL file")
     p_validate.add_argument("path")
     p_validate.set_defaults(func=_cmd_validate)
+
+    p_synth = sub.add_parser("synth", help="generate synthetic audio for every scenario")
+    p_synth.add_argument("path")
+    p_synth.add_argument("--out", required=True)
+    p_synth.set_defaults(func=_cmd_synth)
 
     args = parser.parse_args(argv)
     return args.func(args)
