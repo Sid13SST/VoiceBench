@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -205,6 +205,11 @@ class ScenarioResult(BaseModel):
     scenario_version: str
     source: ResultSource
     transcript: Optional[str] = None
+    # Language Whisper detected (or was told), and the script of the transcript
+    # ("devanagari" / "latin" / "mixed" / "none"), so script mismatches on
+    # code-switched speech can be separated from recognition errors.
+    detected_language: Optional[str] = None
+    transcript_script: Optional[str] = None
     wer: Optional[float] = Field(default=None, ge=0)
     predicted_intent: Optional[str] = None
     predicted_slots: dict[str, str] = Field(default_factory=dict)
@@ -213,6 +218,7 @@ class ScenarioResult(BaseModel):
     # Task completion = right intent AND all expected slots right.
     task_success: Optional[bool] = None
     latency_ms: Optional[float] = Field(default=None, ge=0)
+    audio_duration_s: Optional[float] = Field(default=None, ge=0)
     cost_usd: Optional[float] = Field(default=None, ge=0)
     # Set when the pipeline failed for this scenario; metrics are then None.
     error: Optional[str] = None
@@ -243,6 +249,9 @@ class RunManifest(BaseModel):
     scenarios_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     asr_model: str
     asr_model_version: Optional[str] = None
+    asr_config: dict[str, Any] = Field(default_factory=dict)
+    # "auto" (Whisper detects the language) or "hint" (the scenario language is passed in).
+    language_policy: Optional[str] = None
     device: Optional[str] = None
     tts_engine: Optional[str] = None
     notes: Optional[str] = None
