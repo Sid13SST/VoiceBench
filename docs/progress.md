@@ -133,3 +133,45 @@
   failing cases with transcript vs reference.
 - Until real runs exist, the dashboard can only be shown with the oracle run
   or fixture data, clearly labelled as such.
+
+## Day 3, continued: first real runs (2026-10-16)
+
+**Whisper download, retried again: it works now.** The Whisper `small`
+weights (`Systran/faster-whisper-small@536b066`) downloaded from Hugging Face.
+`VOICEBENCH_ASR_MODEL=small make test` now also runs and passes the
+real-model smoke test.
+
+**Ran**
+- `make bench` (language auto-detect) and `make bench POLICY=hint`, both
+  saved under `results/`. Each takes about 6.5 min for 50 clips on the
+  4-vCPU container.
+- The first `make bench` failed with `ModuleNotFoundError: jiwer`: the venv
+  was made before jiwer became a dependency, and an editable install doesn't
+  pick up new dependencies. Re-running `make setup` fixed it.
+
+**What the runs show** (numbers from the run files; README has the table)
+- English: 13/17 task success, WER 0.39, same under both policies.
+- Hindi: 0/17 (auto) and 1/17 (hint). Auto-detect never chose Hindi.
+- Hindi-English: 4/16 (auto) and 0/16 (hint). With the hint, English words
+  come out in Devanagari and often misspelled.
+- Several clips went into repetition loops ("may God be with you, may God
+  be with you, …"), giving WER up to 20.7 and latency up to about 26 s.
+  Corpus WER is dominated by these few clips.
+
+**Problems found, not fixed yet (fixing after seeing results needs care)**
+- Matcher gap: Whisper wrote order id "7310" as `7-3-1-0`. Normalisation
+  turns that into four separate digit tokens, and the matcher doesn't join
+  them, so `v1-006` fails although the ASR was right. That's a genuine
+  general gap (hyphenated digits are a standard Whisper format), but the
+  fix would be made after seeing v1 results. If I fix it, the current runs
+  stay as they are, the fix gets its own commit, and new runs are added next
+  to the old ones, so the change is visible.
+- Lucky pass: `v1-044` (barge-in) passes only because the leaked agent
+  prompt contains the word "agent".
+- The first transcription in a run includes some warm-up cost. Day 5 latency
+  reporting should do an untimed warm-up call first.
+- Run files from this commit don't contain the model revision. The adapter
+  now records it for future runs, and `results/README.md` states it for
+  these two.
+
+**Next (day 4)**: dashboard over these run files.

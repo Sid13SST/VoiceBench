@@ -4,14 +4,42 @@ A small evaluation harness for voice agents that serve Hindi, English and
 Hindi-English (code-switched) callers, including calls with background noise
 and interruptions.
 
-> **Status: day 3 of 7. There are no ASR results yet.** The scenarios, the
-> synthetic audio, the Whisper adapter, scoring and the runner all exist and
-> are tested. **The baseline has not been run on real Whisper weights:** this
-> build environment's network policy blocks the Hugging Face file servers
-> (`cas-server.xethub.hf.co`, `us.aws.cdn.hf.co`) that host them. Details are in
-> [`docs/progress.md`](docs/progress.md). `make bench` runs the full benchmark
-> on any machine that can download them. Any number in this README will come
-> from a run committed in this repo that you can reproduce.
+> **Status: day 3 of 7.** First baseline runs exist (below). The dashboard,
+> latency/cost reporting and the failure analysis are still to come.
+
+## First baseline (Whisper `small`, synthetic espeak-ng audio)
+
+Task success means the matcher got the right intent *and* every expected
+slot from the transcript. WER is corpus-level after lower-casing and removing
+punctuation. It can go above 1.0 when the model adds words, for example when
+it gets stuck repeating a phrase. Run files and the exact setup are in
+[`results/`](results/README.md).
+
+| language | n | task success, auto-detect | task success, language hint | WER auto | WER hint |
+|----------|---|---------------------------|-----------------------------|----------|----------|
+| en       | 17 | 13/17 | 13/17 | 0.39 | 0.39 |
+| hi       | 17 | 0/17  | 1/17  | 4.30 | 0.88 |
+| hi-en    | 16 | 4/16  | 0/16  | 1.48 | 1.54 |
+| **all**  | 50 | 17/50 | 14/50 | 2.05 | 0.93 |
+
+What these numbers do and don't say:
+
+- **The audio is espeak-ng's robotic synthetic speech, not real callers.**
+  The Hindi failures may come mostly from espeak-ng's Hindi being hard to
+  understand rather than from Whisper's Hindi. This benchmark can't yet tell
+  those apart. Natural, properly licensed Hindi speech would be needed.
+- With auto-detect, Whisper didn't identify a single Hindi or Hindi-English
+  clip as Hindi. It guessed `en`, `hu`, `la`, `ro`, `de` and `ja`, and
+  wrote every transcript in Latin script.
+- With the language hint, Hindi WER drops from 4.30 to 0.88, but task
+  success barely moves (0 → 1 of 17). The words are recognised too poorly
+  for the matcher. On hi-en the hint *hurts*: Whisper writes the English
+  words in Devanagari, often misspelled ("क्रेदिट"), so the matcher misses them.
+- n is 16 or 17 per language, and as small as 3 per language × condition
+  cell. Treat differences of one or two scenarios as noise.
+- Some passes are lucky. In the barge-in clip `v1-044` the transcript is
+  mostly the agent's own prompt, yet it contains "agent", so the intent
+  matches.
 
 ## What exists today
 
