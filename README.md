@@ -4,12 +4,13 @@ A small evaluation harness for voice agents that serve Hindi, English and
 Hindi-English (code-switched) callers, including calls with background noise
 and interruptions.
 
-> **Status: day 2 of 7. There are no results yet.** This repo has the
-> scenario format, 50 scenarios, synthetic audio for each one, and a local
-> Whisper adapter. **The Whisper adapter has not been run on real weights
-> yet:** this build environment's network policy blocks `huggingface.co`, where
-> the weights are hosted (details in [`docs/progress.md`](docs/progress.md)).
-> Scoring and the dashboard come later. Any number in this README will come
+> **Status: day 3 of 7. There are no ASR results yet.** The scenarios, the
+> synthetic audio, the Whisper adapter, scoring and the runner all exist and
+> are tested. **The baseline has not been run on real Whisper weights:** this
+> build environment's network policy blocks the Hugging Face file servers
+> (`cas-server.xethub.hf.co`, `us.aws.cdn.hf.co`) that host them. Details are in
+> [`docs/progress.md`](docs/progress.md). `make bench` runs the full benchmark
+> on any machine that can download them. Any number in this README will come
 > from a run committed in this repo that you can reproduce.
 
 ## What exists today
@@ -32,6 +33,21 @@ and interruptions.
 - `src/voicebench/asr.py`: transcript adapter for a small local Whisper model
   via faster-whisper. Decoding is deterministic (temperature 0) and it times
   each call. No paid or remote APIs.
+- `src/voicebench/textnorm.py`, `metrics.py`: normalisation (lower case,
+  punctuation only; numbers and script are *not* rewritten) and WER via jiwer.
+  Group WER is corpus-level (total edits / total reference words).
+- `src/voicebench/nlu/`: a rule-based intent and slot matcher standing in for
+  the agent's language understanding. It handles English, Devanagari and
+  romanised Hindi, number words ("दो हज़ार" → 2000, "four eight two one" →
+  4821) and self-corrections (the last mention wins). **Its lexicon was
+  written alongside the v1 scenarios**, so v1 scores show how ASR errors
+  break a matcher that reads the clean text perfectly. They don't show how
+  the matcher would do on new phrasings.
+- `src/voicebench/scoring.py`, `runner.py`, `report.py`: per-scenario WER,
+  intent and slot correctness, and task success (right intent *and* every
+  expected slot right). Runs are saved to `results/` with the command, git
+  commit, scenario hash and ASR config, and broken down by language,
+  condition and domain.
 - `tests/`: unit tests for the schema and loader, plus tests that pin the
   makeup of `v1.jsonl`.
 
@@ -45,6 +61,13 @@ make test       # runs pytest
 make validate   # validates scenarios/v1.jsonl and prints its makeup
 make audio      # regenerates audio/v1 (needs espeak-ng: apt-get install espeak-ng)
 
+make bench      # full run: Whisper "small", language auto-detect -> results/
+make bench POLICY=hint MODEL=/path/to/ct2-whisper   # pass the language, use local weights
+.venv/bin/voicebench report results/<run>.json
+
+# pipeline check without ASR (reference text as transcript; not an ASR result)
+.venv/bin/voicebench run --asr oracle --out /tmp/oracle
+
 # transcribe a clip (downloads Whisper "small" from huggingface.co on first use,
 # or pass --model /path/to/ctranslate2-whisper-dir)
 .venv/bin/voicebench transcribe audio/v1/v1-002.wav --model small
@@ -56,7 +79,7 @@ make audio      # regenerates audio/v1 (needs espeak-ng: apt-get install espeak-
 |-----|-------|
 | 1 | scenario/result schema, 50 scenarios, loader, validation, tests ✅ |
 | 2 | synthetic audio via an offline TTS, noise mixing at a set SNR, local Whisper transcript adapter ✅ (adapter not yet run on real weights) |
-| 3 | runner and scoring: WER, rule-based intent/slot matching, task completion |
+| 3 | runner and scoring: WER, rule-based intent/slot matching, task completion ✅ (no ASR run yet) |
 | 4 | FastAPI dashboard: pass/fail by language and condition, failing cases |
 | 5 | latency p50/p95, cost per run, full run saved under `results/` |
 | 6 | CI, reproducibility, data notes, limitations |

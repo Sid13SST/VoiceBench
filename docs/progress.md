@@ -89,3 +89,47 @@
   All tested deterministically on fixed transcripts labelled as fixtures.
 - Retry Whisper download; if it's still blocked, the runner and scoring
   still get built and tested, and results wait until weights are available.
+
+## Day 3 (2026-10-16)
+
+**Whisper download, retried**
+- `huggingface.co` is reachable now, but the weight files themselves come
+  from `cas-server.xethub.hf.co` (Hugging Face's Xet storage) and, with Xet
+  turned off (`HF_HUB_DISABLE_XET=1`), from `us.aws.cdn.hf.co`. The proxy
+  rejects both, so **still no transcripts**. Fix: also allow `*.hf.co`
+  (or those two hosts) in the environment's network settings, or run
+  `make bench` on a normal machine.
+
+**Done**
+- `textnorm.py`: NFC, lower case, punctuation and danda removed, Devanagari
+  combining marks kept. Numbers and script are deliberately *not* rewritten.
+  `script_profile` labels each transcript devanagari / latin / mixed, so
+  hi-en script mismatches can be counted separately from recognition errors.
+- `metrics.py`: per-utterance WER, corpus WER, nearest-rank percentile
+  (ready for day 5 latency).
+- `nlu/numbers.py`: English, Devanagari and romanised Hindi number words.
+  Runs of single digits are read as ids, other runs as quantities. One bug
+  was found and fixed while checking v1: "transfer कर दो" was read as
+  amount 2. A lone "दो" after a light verb is now treated as the verb.
+- `nlu/matcher.py` + `lexicon.py`: keyword scoring per domain intent;
+  gazetteers for cities, menu, payees, devices and issues; last mention wins
+  for self-corrections; first mention wins for device.
+- `scoring.py`, `runner.py`, `report.py`; CLI `voicebench run` / `report`;
+  `make bench`.
+- 153 tests pass, 1 skipped (real-model smoke test). Scoring tests use
+  hand-written transcripts marked `fixture`.
+
+**Honest caveats**
+- The matcher reads all 50 v1 *references* correctly. That is a coverage
+  check, not a result: the lexicon was written for these sentences. Its job
+  in the benchmark is to show how much ASR errors break a matcher that
+  already understands the clean text.
+- The matcher is told the domain (one agent per business). Without that,
+  "cancel" would be ambiguous between orders and bookings.
+- Extra predicted slots are not penalised; only expected slots must match.
+
+**Next (day 4)**
+- FastAPI dashboard over saved runs: pass/fail by language and condition,
+  failing cases with transcript vs reference.
+- Until real runs exist, the dashboard can only be shown with the oracle run
+  or fixture data, clearly labelled as such.
