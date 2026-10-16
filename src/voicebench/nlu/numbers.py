@@ -45,6 +45,10 @@ _DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 # Romanised words that are also common English/Hinglish words. They count as
 # numbers only inside a run that already contains another number token.
 _AMBIGUOUS = {"do", "das", "char", "teen", "ek", "oh", "nau", "saat"}
+# "दो" is also the imperative "give/do": "कर दो", "बता दो", "भेज दो". Alone
+# after one of these verbs it is read as the verb, not the number two.
+_DO_WORDS = {"दो", "do"}
+_LIGHT_VERBS = {"कर", "kar", "दे", "de", "बता", "bata", "भेज", "bhej", "ले", "le", "हटा", "बदल"}
 
 
 @dataclass(frozen=True)
@@ -99,6 +103,9 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
             j += 1
         run = tokens[i:j]
         if len(run) == 1 and run[0] in _AMBIGUOUS:
+            i = j
+            continue
+        if len(run) == 1 and run[0] in _DO_WORDS and i > 0 and tokens[i - 1] in _LIGHT_VERBS:
             i = j
             continue
         if len(run) == 1 and _token_kind(run[0]) == "digits":

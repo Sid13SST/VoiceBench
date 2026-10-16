@@ -31,6 +31,9 @@ def values(text):
         ("a hundred", []),  # bare multiplier
         ("i do want it", []),  # ambiguous romanised word alone
         ("ek do teen", [("123", True)]),
+        ("amit को fifteen hundred rupees transfer कर दो", [("1500", False)]),  # verb दो
+        ("ऑर्डर कैंसल कर दो", []),
+        ("मुझे दो पिज़्ज़ा चाहिए", [("2", False)]),  # number दो
     ],
 )
 def test_find_numbers(text, expected):
