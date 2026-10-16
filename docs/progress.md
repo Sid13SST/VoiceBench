@@ -40,3 +40,52 @@
 - Transcript adapter for a small local Whisper model (faster-whisper). If the
   weights cannot be downloaded in this environment, say so here and in the
   README rather than faking transcripts.
+
+## Day 2 (2026-10-16)
+
+**Done**
+- `audio/signal.py`: WAV I/O, resampling to 16 kHz, `mix_at_snr` (scales
+  noise so the SNR over the whole clip equals the target), overlay, peak
+  normalisation. Tests check the SNR actually achieved at -3, 0, 5 and 10 dB.
+- `audio/noise.py`: seeded white, pink (1/f) and babble noise. Babble is
+  built from four *other* scenarios' synthetic utterances, so it contains no
+  real voices.
+- `audio/tts.py`: espeak-ng adapter (`en-us` for en; `hi` for hi and hi-en,
+  which reads Latin-script words with English rules).
+- `audio/build.py` + `voicebench synth`: one WAV per scenario. Noise clips
+  are mixed at 5 or 10 dB (measured SNR matches the target to within 0.01 dB
+  and is stored per file). Barge-in clips play the agent prompt (different
+  voice variant, -6 dB) with the caller starting at `caller_onset_ms`
+  (1.9 to 2.6 s of overlap). Self-correction clips are plain speech, since
+  the correction is in the words.
+- `audio/v1/`: 50 WAVs, 198.9 s in total, 6.3 MB, committed with a manifest.
+  Regenerating with espeak-ng 1.51 gave byte-identical files. A test checks
+  every committed WAV against its manifest hash.
+- `DATA_NOTES.md`: source and licence of every piece of data.
+- `asr.py` + `voicebench transcribe`: faster-whisper adapter with
+  deterministic decoding, optional language hint (hi-en is decoded as `hi`
+  since Whisper has no code-switched language code) and per-call latency.
+- 76 tests pass, 1 skipped (the real-model smoke test, see below).
+
+**Did not work**
+- **No Whisper weights in this environment.** faster-whisper downloads
+  models from `huggingface.co`, and openai-whisper downloads from
+  `openaipublic.azureedge.net`. The build environment's network proxy
+  returns 403 for both, so no transcript has been produced yet and none
+  is faked. The adapter fails with a clear `ASRUnavailable` error (tested).
+  Fix: allow `huggingface.co` in the environment's network settings, or run
+  `make setup && .venv/bin/voicebench transcribe audio/v1/v1-002.wav` on a
+  machine with normal internet access. Once the weights are cached,
+  `VOICEBENCH_ASR_MODEL=small make test` also runs the real-model smoke test.
+- I could not listen to the audio here. Checks so far are mechanical only:
+  non-silent, correct length, exact SNR. espeak-ng's Hindi is clearly
+  robotic, which is a limitation of the benchmark audio, not of the scoring.
+
+**Next (day 3)**
+- Runner: scenarios → audio → transcript → score, writing a `RunManifest`.
+- Scoring: WER with a stated text normalisation (lower case, punctuation
+  stripped; script mismatch on hi-en counted separately), a rule-based
+  intent/slot matcher (including Hindi number words), and task completion.
+  All tested deterministically on fixed transcripts labelled as fixtures.
+- Retry Whisper download; if it's still blocked, the runner and scoring
+  still get built and tested, and results wait until weights are available.
