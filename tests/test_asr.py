@@ -85,3 +85,7 @@ def test_cli_transcribe_reports_unavailable_model(tmp_path, capsys):
     code = main(["transcribe", str(wav), "--model", str(tmp_path / "missing"), "--offline"])
     assert code == 2
     assert "could not load" in capsys.readouterr().err
+
+
+def test_model_revision_is_none_for_local_dir(tmp_path):
+    assert FasterWhisperTranscriber(str(tmp_path)).describe()["model_revision"] is None

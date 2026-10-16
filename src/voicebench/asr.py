@@ -95,12 +95,25 @@ class FasterWhisperTranscriber:
         return {
             "name": self.name,
             "model": self.model_ref,
+            "model_revision": self._model_revision(),
             "backend": "faster-whisper",
             "backend_version": fw_version,
             "device": self.device,
             "compute_type": self.compute_type,
             "beam_size": self.beam_size,
         }
+
+    def _model_revision(self) -> Optional[str]:
+        """Hugging Face snapshot hash of the weights, if they came from the HF cache."""
+        if Path(self.model_ref).exists():
+            return None
+        try:
+            from faster_whisper.utils import download_model
+
+            path = Path(download_model(self.model_ref, local_files_only=True))
+        except Exception:
+            return None
+        return f"{path.parent.parent.name.removeprefix('models--').replace('--', '/')}@{path.name}"
 
     def transcribe(self, audio: np.ndarray, language: Optional[str] = None) -> Transcript:
         model = self._load()
