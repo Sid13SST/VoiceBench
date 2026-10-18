@@ -85,6 +85,22 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_rescore(args: argparse.Namespace) -> int:
+    from voicebench.report import format_table, summarise
+    from voicebench.runner import load_run, rescore, save
+
+    previous = load_run(args.run)
+    scenarios = load_scenarios(previous.scenarios_file)
+    if file_sha256(previous.scenarios_file) != previous.scenarios_sha256:
+        print("scenario file changed since this run; refusing to rescore", file=sys.stderr)
+        return 1
+    manifest = rescore(previous, scenarios, " ".join(["voicebench", *sys.argv[1:]]))
+    path = save(manifest, args.out)
+    print(format_table(summarise(manifest, scenarios)))
+    print(f"saved {path}")
+    return 0
+
+
 def _cmd_report(args: argparse.Namespace) -> int:
     from voicebench.report import format_table, summarise
     from voicebench.runner import load_run
@@ -125,6 +141,11 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--command", default=None, help=argparse.SUPPRESS)
     p_run.add_argument("-v", "--verbose", action="store_true")
     p_run.set_defaults(func=_cmd_run)
+
+    p_res = sub.add_parser("rescore", help="re-score a saved run's transcripts with the current code")
+    p_res.add_argument("run")
+    p_res.add_argument("--out", default="results")
+    p_res.set_defaults(func=_cmd_rescore)
 
     p_rep = sub.add_parser("report", help="print the breakdown of a saved run")
     p_rep.add_argument("run")

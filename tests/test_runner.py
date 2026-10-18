@@ -142,3 +142,27 @@ def test_cli_run_reports_unavailable_model(tmp_path, capsys):
                  "--out", str(tmp_path / "r")])
     assert code == 2
     assert not (tmp_path / "r").exists()
+
+
+def test_rescore_keeps_transcripts_and_links_back(setup):
+    from voicebench.runner import rescore
+
+    scenarios, sfile, audio = setup
+    asr = ScriptedTranscriber({
+        "v1-001": "please send five thousand rupees to rahul",
+        "v1-002": "राहुल को पाँच हज़ार रुपये भेजो",
+        "v1-003": RuntimeError("decoder crashed"),
+    })
+    first = run(scenarios, audio, asr, str(sfile), "t", source=FIX)
+    # Simulate a stale score from older matcher code.
+    stale = first.model_copy(update={"results": [
+        first.results[0].model_copy(update={"task_success": False, "slots_correct": False}),
+        *first.results[1:],
+    ]})
+    again = rescore(stale, scenarios, "voicebench rescore x")
+    assert again.rescored_from == first.run_id
+    assert again.run_id.startswith(first.run_id + "-rescored-")
+    assert [r.transcript for r in again.results] == [r.transcript for r in first.results]
+    assert again.results[0].task_success is True  # recomputed
+    assert again.results[0].latency_ms == first.results[0].latency_ms
+    assert again.results[2].error == "RuntimeError: decoder crashed"  # errors kept as they were

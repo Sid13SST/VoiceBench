@@ -114,6 +114,40 @@ def run(
     )
 
 
+def rescore(previous: RunManifest, scenarios: list[Scenario], command: str) -> RunManifest:
+    """Score the transcripts of ``previous`` again with the current code.
+
+    No audio is decoded: transcripts, latency and detected language are
+    copied unchanged, so any difference comes from scoring/matching changes
+    alone. Scenarios that errored before stay errored.
+    """
+    by_id = {s.id: s for s in scenarios}
+    results = []
+    for old in previous.results:
+        s = by_id[old.scenario_id]
+        if old.error is not None or old.transcript is None:
+            results.append(old)
+            continue
+        results.append(
+            score(
+                s, old.transcript, previous.source,
+                latency_ms=old.latency_ms, audio_duration_s=old.audio_duration_s,
+                detected_language=old.detected_language, cost_usd=old.cost_usd,
+            )
+        )
+    commit = git_commit(Path(previous.scenarios_file).resolve().parent)
+    return previous.model_copy(
+        update={
+            "run_id": f"{previous.run_id}-rescored-{(commit or 'nogit')[:7]}",
+            "created_at": datetime.now(timezone.utc),
+            "command": command,
+            "git_commit": commit,
+            "rescored_from": previous.run_id,
+            "results": results,
+        }
+    )
+
+
 def save(manifest: RunManifest, out_dir: str | Path) -> Path:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

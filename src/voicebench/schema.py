@@ -254,6 +254,8 @@ class RunManifest(BaseModel):
     language_policy: Optional[str] = None
     device: Optional[str] = None
     tts_engine: Optional[str] = None
+    # Set when transcripts were taken from an earlier run and only re-scored.
+    rescored_from: Optional[str] = None
     notes: Optional[str] = None
     results: list[ScenarioResult]
 
