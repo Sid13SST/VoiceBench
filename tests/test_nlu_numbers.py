@@ -22,6 +22,9 @@ def values(text):
         ("order four eight two one", [("4821", True)]),
         ("दो दो नौ शून्य शून्य एक सात सात चार पाँच", [("2290017745", True)]),
         ("order 4821", [("4821", True)]),
+        ("cancel order 7-3-1-0 please", [("7310", True)]),  # Whisper's digit-by-digit style
+        ("order 3, 1, 2, 7 cancel", [("3127", True)]),
+        ("4821 5590", [("4821", True), ("5590", True)]),  # multi-digit strings stay separate
         ("पीएनआर ४५२१", [("4521", True)]),
         ("rs 5000", [("5000", True)]),
         ("two masala dosa wait make that three", [("2", False), ("3", False)]),

@@ -97,8 +97,15 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
             continue
         j = i
         while j < len(tokens) and _token_kind(tokens[j]) is not None:
-            # a digit string ends a run ("4821 5590" are two ids)
-            if j > i and _token_kind(tokens[j]) == "digits" and _token_kind(tokens[j - 1]) == "digits":
+            # a digit string ends a run ("4821 5590" are two ids), except that
+            # single digits join up: Whisper writes "7310" read digit by digit
+            # as "7-3-1-0" or "7, 3, 1, 0", which normalise to "7 3 1 0".
+            if (
+                j > i
+                and _token_kind(tokens[j]) == "digits"
+                and _token_kind(tokens[j - 1]) == "digits"
+                and not (len(tokens[j]) == 1 and len(tokens[j - 1]) == 1)
+            ):
                 break
             j += 1
         run = tokens[i:j]
@@ -108,8 +115,8 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
         if len(run) == 1 and run[0] in _DO_WORDS and i > 0 and tokens[i - 1] in _LIGHT_VERBS:
             i = j
             continue
-        if len(run) == 1 and _token_kind(run[0]) == "digits":
-            spans.append(NumberSpan(i, j, run[0].translate(_DEV_DIGITS), digit_sequence=True))
+        if all(_token_kind(t) == "digits" for t in run):
+            spans.append(NumberSpan(i, j, "".join(run).translate(_DEV_DIGITS), digit_sequence=True))
         elif len(run) >= 2 and all(t in UNITS and UNITS[t] <= 9 for t in run):
             spans.append(NumberSpan(i, j, "".join(str(UNITS[t]) for t in run), digit_sequence=True))
         elif all(t in MULTIPLIERS for t in run):
