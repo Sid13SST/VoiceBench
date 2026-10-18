@@ -218,3 +218,50 @@ real-model smoke test.
   hardware recorded.
 - Full run over all 50 scenarios with the exact command and model revision
   saved under `results/`.
+
+## Day 5 (2026-10-18)
+
+**Done**
+- Run files now record the hardware (CPU, logical CPUs, RAM, OS, Python),
+  the number of untimed warm-up calls, the wall time of the timed loop, a
+  per-scenario `cost_usd`, and a `cost_note` explaining it.
+- The runner makes one untimed warm-up transcription before timing. A failed
+  warm-up only aborts the run if the model can't load at all.
+- `report.latency_stats`: nearest-rank p50/p95 of per-clip latency and
+  real-time factor, per group. Shown in `voicebench report` and on the
+  dashboard's run page, together with cost, wall time, hardware and whether
+  a warm-up was done.
+- Cost: local faster-whisper costs 0 USD per call. The note says electricity
+  and hardware are not counted.
+- `voicebench compare A B`: which transcripts and which pass/fail outcomes
+  differ between two runs.
+- Full runs at commit `20939304`, saved in `results/`:
+  - auto-detect: 18/50, corpus WER 1.63, p50 2886 ms, p95 11707 ms, 183 s wall.
+  - language hint: 15/50, corpus WER 0.97, p50 2749 ms, p95 10968 ms, 177 s wall.
+- 174 tests pass, 1 skipped.
+
+**What surprised me / did not work**
+- **Transcripts are not reproducible across machines.** This session's
+  container has a different CPU (Xeon @ 2.10 GHz vs 2.80 GHz on day 3). The
+  model revision and settings are the same, yet 22/50 (auto) and 33/50
+  (hint) transcripts differ from day 3. On the same machine a re-run gave
+  0/50 differences, so decoding itself is deterministic. The int8 CPU
+  kernels most likely differ between processors; I haven't verified that
+  cause. No scenario flipped between pass and fail, but Hindi corpus WER
+  (auto) moved from 4.30 to 3.02. The README now says WER above about 1
+  should be read as "unusable output", not as a precise number.
+- Day 3's latency (p50 about 5.7 s) and today's (about 2.9 s) aren't
+  comparable: different CPU, and day 3 had no warm-up. Only today's runs
+  are reported.
+- English latency is lower with the language hint (p50 1806 ms) than with
+  auto-detect (2869 ms). Auto-detect has to identify the language first.
+  It's an observation from one run each, not a measured breakdown.
+- p95 latency (about 11 s) comes from the same few clips that went into
+  repetition loops. It describes worst-case behaviour on garbled input more
+  than typical speed.
+
+**Next (day 6)**
+- GitHub Actions CI (tests, scenario validation, audio manifest check; no
+  model download in CI).
+- Reproducibility notes in one place, finishing DATA_NOTES.md, and a
+  limitations section in the README.
