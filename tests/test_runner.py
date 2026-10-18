@@ -76,10 +76,10 @@ def test_language_policy(setup):
     texts = {s.id: s.reference for s in scenarios}
     asr = ScriptedTranscriber(texts)
     run(scenarios, audio, asr, str(sfile), "pytest", source=FIX, language_policy="hint")
-    assert asr.languages == ["en", "hi", "en"]
+    assert asr.languages == [None, "en", "hi", "en"]  # first call is the untimed warm-up
     asr = ScriptedTranscriber(texts)
     run(scenarios, audio, asr, str(sfile), "pytest", source=FIX)
-    assert asr.languages == [None, None, None]
+    assert asr.languages == [None, None, None, None]
     with pytest.raises(ValueError):
         run(scenarios, audio, asr, str(sfile), "pytest", language_policy="guess")
 
@@ -166,3 +166,38 @@ def test_rescore_keeps_transcripts_and_links_back(setup):
     assert again.results[0].task_success is True  # recomputed
     assert again.results[0].latency_ms == first.results[0].latency_ms
     assert again.results[2].error == "RuntimeError: decoder crashed"  # errors kept as they were
+
+
+def test_warmup_cost_and_hardware_recorded(setup):
+    scenarios, sfile, audio = setup
+
+    class Costed(ScriptedTranscriber):
+        cost_note = "test pricing"
+
+        def cost_usd(self, audio_duration_s):
+            return 0.5 * audio_duration_s
+
+    asr = Costed({s.id: s.reference for s in scenarios})
+    m = run(scenarios, audio, asr, str(sfile), "t", source=FIX)
+    assert m.warmup_runs == 1
+    assert len(asr.languages) == len(scenarios) + 1
+    assert len(m.results) == len(scenarios)  # warm-up output is discarded
+    assert [r.cost_usd for r in m.results] == [0.5, 0.5, 0.5]
+    assert m.cost_note == "test pricing"
+    assert m.wall_time_s is not None and m.wall_time_s >= 0
+    assert {"cpu", "logical_cpus", "ram_gb", "os", "python"} <= set(m.hardware)
+
+
+def test_failed_warmup_does_not_abort_run(setup):
+    scenarios, sfile, audio = setup
+    asr = ScriptedTranscriber({"v1-001": RuntimeError("bad file"), "v1-002": "x", "v1-003": "y"})
+    m = run(scenarios, audio, asr, str(sfile), "t", source=FIX)
+    assert m.warmup_runs == 0
+    assert m.results[0].error == "RuntimeError: bad file"
+
+
+def test_oracle_run_has_no_warmup_or_cost(setup):
+    scenarios, sfile, audio = setup
+    m = run(scenarios, audio, ReferenceTranscriber(), str(sfile), "t", source=FIX)
+    assert m.warmup_runs == 0 and m.cost_note is None
+    assert all(r.cost_usd is None and r.latency_ms is None for r in m.results)

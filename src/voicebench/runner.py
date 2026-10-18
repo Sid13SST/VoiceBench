@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import platform
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -36,6 +39,29 @@ class ReferenceTranscriber:
         )
 
 
+def hardware_info() -> dict[str, Any]:
+    cpu = platform.processor() or None
+    try:
+        for line in Path("/proc/cpuinfo").read_text().splitlines():
+            if line.startswith("model name"):
+                cpu = line.split(":", 1)[1].strip()
+                break
+    except OSError:
+        pass
+    try:
+        ram_gb = round(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 1024**3, 1)
+    except (ValueError, OSError, AttributeError):
+        ram_gb = None
+    return {
+        "cpu": cpu,
+        "logical_cpus": os.cpu_count(),
+        "ram_gb": ram_gb,
+        "os": f"{platform.system()} {platform.release()}",
+        "machine": platform.machine(),
+        "python": platform.python_version(),
+    }
+
+
 def git_commit(repo: Path) -> Optional[str]:
     try:
         sha = subprocess.run(
@@ -66,7 +92,23 @@ def run(
     audio_manifest_path = audio_dir / "manifest.json"
     audio_manifest = json.loads(audio_manifest_path.read_text(encoding="utf-8")) if audio_manifest_path.exists() else {}
 
+    # One untimed call so model loading and first-call setup don't land in
+    # the first scenario's latency.
+    warmup_runs = 0
+    if not hasattr(transcriber, "transcribe_scenario"):
+        first = next((audio_dir / f"{s.id}.wav" for s in scenarios if (audio_dir / f"{s.id}.wav").exists()), None)
+        if first is not None:
+            try:
+                transcriber.transcribe_file(first, language=None)
+                warmup_runs = 1
+            except ASRUnavailable:
+                raise
+            except Exception:
+                pass  # the timed call for that file will record the error
+
+    cost_fn = getattr(transcriber, "cost_usd", None)
     results = []
+    start = time.perf_counter()
     for s in scenarios:
         wav = audio_dir / f"{s.id}.wav"
         language = WHISPER_LANGUAGE_HINT[s.language.value] if language_policy == "hint" else None
@@ -88,11 +130,14 @@ def run(
                     latency_ms=t.latency_ms if t.audio_duration_s else None,
                     audio_duration_s=t.audio_duration_s or None,
                     detected_language=t.detected_language or t.requested_language,
+                    cost_usd=cost_fn(t.audio_duration_s) if cost_fn else None,
                 )
             )
         if progress:
             r = results[-1]
             progress(f"{s.id} {'PASS' if r.task_success else 'FAIL'} {r.transcript or r.error or ''}")
+
+    wall_time_s = round(time.perf_counter() - start, 2)
 
     desc = transcriber.describe()
     created = datetime.now(timezone.utc)
@@ -110,6 +155,10 @@ def run(
         language_policy=language_policy,
         device=desc.get("device"),
         tts_engine=audio_manifest.get("tts_engine"),
+        hardware=hardware_info(),
+        warmup_runs=warmup_runs,
+        wall_time_s=wall_time_s,
+        cost_note=getattr(transcriber, "cost_note", None),
         results=results,
     )
 
