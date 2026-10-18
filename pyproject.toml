@@ -15,11 +15,15 @@ dependencies = [
     "scipy>=1.10",
     "soundfile>=0.12",
     "jiwer>=3.0",
+    "fastapi>=0.110",
+    "jinja2>=3.1",
+    "uvicorn>=0.27",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
+    "httpx>=0.27",
 ]
 asr = [
     "faster-whisper>=1.0",
@@ -30,6 +34,9 @@ voicebench = "voicebench.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"voicebench.dashboard" = ["templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

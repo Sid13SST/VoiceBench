@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ m.run_id }} · VoiceBench{% endblock %}
+{% macro meter(c) -%}
+{% if c.n %}<div class="meter" title="{{ c.ok }} of {{ c.n }} passed ({{ '%.0f'|format(100 * c.rate) }}%)">
+  <span class="val">{{ c.ok }}/{{ c.n }}</span>
+  <span class="track"><span class="fill" style="width: {{ '%.1f'|format(100 * c.rate) }}%"></span></span>
+</div>{% else %}<span class="muted">-</span>{% endif %}
+{%- endmacro %}
+{% block body %}
+<p class="small"><a href="/">← all runs</a></p>
+<h1>{{ m.run_id }}</h1>
+<p class="muted small">
+  ASR <b>{{ m.asr_model }}</b>{% if m.asr_model_version %} ({{ m.asr_config.backend }} {{ m.asr_model_version }}){% endif %}
+  · language {{ m.language_policy or "-" }} · audio {{ m.tts_engine or "-" }}
+  · commit <code>{{ (m.git_commit or "unknown")[:12] }}</code><br>
+  command <code>{{ m.command }}</code>
+</p>
+{% if m.source.value == "fixture" %}<div class="banner"><b>Fixture data.</b> These results are hand-written for testing and are not a measurement.</div>{% endif %}
+{% if m.asr_model == "oracle-reference" %}<div class="banner"><b>Not an ASR result.</b> The reference text was used as the transcript, to check the pipeline.</div>{% endif %}
+{% if m.rescored_from %}<div class="banner">Re-scored from <a href="/runs/{{ m.rescored_from }}">{{ m.rescored_from }}</a>: same transcripts, scored again with the code at this commit.</div>{% endif %}
+{% if not hash_ok %}<div class="banner"><b>The scenario file has changed since this run.</b> References shown may not be the ones it was scored against.</div>{% endif %}
+{% if m.tts_engine and m.tts_engine.startswith("espeak") %}<p class="small muted">Audio is synthetic espeak-ng speech, not real callers. Results describe this audio only.</p>{% endif %}
+
+<h2>Task success by language and condition</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>language</th>{% for c in conditions %}<th>{{ c }}</th>{% endfor %}<th>all</th></tr></thead>
+<tbody>
+{% for lang in languages + ("all",) %}
+<tr><th>{{ lang }}</th>{% for c in conditions + ("all",) %}<td>{{ meter(matrix[lang][c]) }}</td>{% endfor %}</tr>
+{% endfor %}
+</tbody></table></div>
+<p class="legend">Each cell: scenarios passed / scenarios in the cell. Cells hold 3 to 10 scenarios, so one scenario moves a rate a lot.</p>
+
+<h2>WER and intent accuracy</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>group</th><th class="num">n</th><th class="num">intent correct</th><th class="num">corpus WER</th><th class="num">pipeline errors</th></tr></thead>
+<tbody>
+{% for title, groups in [("all", {"all": summary.overall}), ("language", summary.by_language), ("condition", summary.by_condition)] %}
+{% for name, g in groups.items() %}
+<tr><td>{{ name if title == "all" else title ~ ": " ~ name }}</td><td class="num">{{ g.n }}</td>
+<td class="num">{{ "%.0f"|format(100 * g.intent_accuracy) }}%</td>
+<td class="num">{{ "%.2f"|format(g.corpus_wer) if g.corpus_wer is not none else "-" }}</td>
+<td class="num">{{ g.errors }}</td></tr>
+{% endfor %}{% endfor %}
+</tbody></table></div>
+<p class="legend">WER after lower-casing and removing punctuation. Numbers and script are not rewritten, so "5000" vs "five thousand" counts as an error. WER can exceed 1 when the model adds words.</p>
+
+<h2 id="cases">Cases</h2>
+<form class="filters" method="get" action="#cases">
+  <label>status<select name="status">{% for s in ("fail", "pass", "all") %}<option value="{{ s }}" {% if f.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+  <label>language<select name="language"><option value="">all</option>{% for l in languages %}<option {% if f.language == l %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label>condition<select name="condition"><option value="">all</option>{% for c in conditions %}<option {% if f.condition == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
+  <button type="submit">apply</button>
+</form>
+<p class="muted small">{{ cases|length }} case{{ "" if cases|length == 1 else "s" }}. In the word diff:
+  <span class="w del">missed</span> reference words, <span class="w ins">added</span> words, <span class="w sub">substituted</span> words.</p>
+
+{% for c in cases %}{% set s = c.scenario %}{% set r = c.result %}
+<section class="case">
+  <header>
+    <span class="status {{ 'pass' if r.task_success else 'fail' }}">{{ "✓ PASS" if r.task_success else "✗ FAIL" }}</span>
+    <b>{{ s.id }}</b>
+    <span class="muted small">{{ s.language.value }} · {{ s.domain.value }} · {{ s.condition.value }}{% if s.snr_db %} {{ s.snr_db }} dB {{ s.noise_type.value }}{% endif %}{% if s.interruption %} ({{ s.interruption.kind.value }}){% endif %}</span>
+    {% if r.wer is not none %}<span class="small">WER {{ "%.2f"|format(r.wer) }}</span>{% endif %}
+    {% if r.latency_ms is not none %}<span class="small muted">{{ "%.0f"|format(r.latency_ms) }} ms</span>{% endif %}
+    {% if r.detected_language %}<span class="small muted">lang {{ r.detected_language }} · script {{ r.transcript_script }}</span>{% endif %}
+  </header>
+  {% if r.error %}
+  <p class="status fail">Pipeline error: {{ r.error }}</p>
+  {% else %}
+  <div class="diff">
+    <span class="lbl">reference</span>
+    <span>{% for w in c.diff %}{% if w.op == "equal" %}{{ w.ref }} {% elif w.op in ("del", "sub") %}<span class="w {{ w.op }}">{{ w.ref }}</span> {% endif %}{% endfor %}</span>
+    <span class="lbl">transcript</span>
+    <span>{% for w in c.diff %}{% if w.op == "equal" %}{{ w.hyp }} {% elif w.op in ("ins", "sub") %}<span class="w {{ w.op }}">{{ w.hyp }}</span> {% endif %}{% endfor %}{% if not c.diff or not r.transcript %}<span class="muted">(empty)</span>{% endif %}</span>
+    <span class="lbl">raw</span><span class="small muted">{{ r.transcript }}</span>
+  </div>
+  <div class="kv">
+    <b>intent</b> expected <code>{{ s.expected_intent }}</code>, got <code>{{ r.predicted_intent or "none" }}</code>
+    <span class="status {{ 'pass' if r.intent_correct else 'fail' }}">{{ "✓" if r.intent_correct else "✗" }}</span>
+    {% if c.slot_errors %}<br><b>slots wrong</b>
+      {% for k, (want, got) in c.slot_errors.items() %}<code>{{ k }}</code>: expected <code>{{ want }}</code>, got <code>{{ got if got is not none else "missing" }}</code>{% if not loop.last %}; {% endif %}{% endfor %}
+    {% elif s.expected_slots %}<br><b>slots</b> all correct{% endif %}
+  </div>
+  {% endif %}
+  {% if has_audio %}<audio controls preload="none" src="/audio/{{ s.id }}.wav"></audio>{% endif %}
+</section>
+{% endfor %}
+{% endblock %}
