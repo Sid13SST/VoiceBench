@@ -12,8 +12,16 @@ written by `voicebench run` and never edited by hand. `voicebench report
 |------|---------|-----------------|
 | `20261016T080842Z-faster-whisper-small-auto.json` | `make bench` | auto-detect |
 | `20261016T081450Z-faster-whisper-small-hint.json` | `make bench POLICY=hint` | scenario language passed to Whisper (hi-en → `hi`) |
+| `…-auto-rescored-75a9e5c.json` | `voicebench rescore results/20261016T080842Z-faster-whisper-small-auto.json` | as auto run |
+| `…-hint-rescored-75a9e5c.json` | `voicebench rescore results/20261016T081450Z-faster-whisper-small-hint.json` | as hint run |
 
-Both runs share this setup:
+The two `rescored` files reuse the original transcripts unchanged and score
+them again at commit `75a9e5c`. That commit includes the fix that joins
+digits Whisper writes as `7-3-1-0`. Compared with the originals, exactly one
+scenario changes in each run: `v1-006` goes from fail to pass. The
+originals stay here unchanged, so the effect of that fix can be checked.
+
+The two original runs share this setup:
 
 - Code at commit `40523cf`, clean tree.
 - `scenarios/v1.jsonl`, sha256 `75fed5e1…aa1b`.

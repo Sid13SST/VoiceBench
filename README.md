@@ -13,14 +13,17 @@ Task success means the matcher got the right intent *and* every expected
 slot from the transcript. WER is corpus-level after lower-casing and removing
 punctuation. It can go above 1.0 when the model adds words, for example when
 it gets stuck repeating a phrase. Run files and the exact setup are in
-[`results/`](results/README.md).
+[`results/`](results/README.md). The numbers are from the `rescored-75a9e5c`
+runs: the same transcripts as the original runs, scored after a matcher fix
+for digits written as `7-3-1-0`. The fix changes only `v1-006`, which is
+English. Before it, English was 13/17 and the totals 17/50 and 14/50.
 
 | language | n | task success, auto-detect | task success, language hint | WER auto | WER hint |
 |----------|---|---------------------------|-----------------------------|----------|----------|
-| en       | 17 | 13/17 | 13/17 | 0.39 | 0.39 |
+| en       | 17 | 14/17 | 14/17 | 0.39 | 0.39 |
 | hi       | 17 | 0/17  | 1/17  | 4.30 | 0.88 |
 | hi-en    | 16 | 4/16  | 0/16  | 1.48 | 1.54 |
-| **all**  | 50 | 17/50 | 14/50 | 2.05 | 0.93 |
+| **all**  | 50 | 18/50 | 15/50 | 2.05 | 0.93 |
 
 What these numbers do and don't say:
 
