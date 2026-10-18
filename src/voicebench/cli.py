@@ -101,6 +101,20 @@ def _cmd_rescore(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_compare(args: argparse.Namespace) -> int:
+    from voicebench.compare import compare_runs
+    from voicebench.runner import load_run
+
+    c = compare_runs(load_run(args.a), load_run(args.b))
+    print(f"{c['a']}\n  vs {c['b']}")
+    print(f"scenarios compared: {c['compared']}; same hardware: {c['same_hardware']}; "
+          f"same model revision: {c['same_model']}")
+    print(f"transcripts differ: {len(c['transcripts_differ'])} {' '.join(c['transcripts_differ'])}")
+    print(f"task outcome differs: {len(c['task_outcome_differs'])} "
+          + " ".join(f"{i}({x}->{y})" for i, x, y in c["task_outcome_differs"]))
+    return 0
+
+
 def _cmd_report(args: argparse.Namespace) -> int:
     from voicebench.report import format_table, summarise
     from voicebench.runner import load_run
@@ -156,6 +170,11 @@ def main(argv: list[str] | None = None) -> int:
     p_res.add_argument("run")
     p_res.add_argument("--out", default="results")
     p_res.set_defaults(func=_cmd_rescore)
+
+    p_cmp = sub.add_parser("compare", help="compare transcripts and outcomes of two runs")
+    p_cmp.add_argument("a")
+    p_cmp.add_argument("b")
+    p_cmp.set_defaults(func=_cmd_compare)
 
     p_rep = sub.add_parser("report", help="print the breakdown of a saved run")
     p_rep.add_argument("run")
