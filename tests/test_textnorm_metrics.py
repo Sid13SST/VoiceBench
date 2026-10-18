@@ -68,3 +68,19 @@ def test_percentile_nearest_rank():
     assert percentile([], 50) is None
     with pytest.raises(ValueError):
         percentile(xs, 101)
+
+
+def test_latency_stats_nearest_rank_and_rtf():
+    from voicebench.report import latency_stats
+    from voicebench.schema import ScenarioResult
+
+    def r(i, lat, dur):
+        return ScenarioResult(scenario_id=f"v1-{i:03d}", scenario_version="v1", source="fixture",
+                              latency_ms=lat, audio_duration_s=dur)
+
+    results = [r(i, 1000.0 * i, 2.0) for i in range(1, 21)] + [r(21, None, 2.0), r(22, 500.0, None)]
+    s = latency_stats(results)
+    assert s["n_timed"] == 20  # untimed and zero-duration items are skipped
+    assert s["latency_p50_ms"] == 10_000 and s["latency_p95_ms"] == 19_000
+    assert s["rtf_p50"] == 5.0 and s["rtf_p95"] == 9.5
+    assert latency_stats([])["latency_p50_ms"] is None
