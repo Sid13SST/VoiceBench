@@ -90,6 +90,7 @@ def test_run_page_shows_banner_matrix_and_failures(fixture_repo):
     r = client.get("/runs/fixture-run")
     assert r.status_code == 200
     assert "Fixture data." in r.text
+    assert "No timed transcriptions" in r.text and "Hardware not recorded" in r.text
     assert r.text.count('class="case"') == 2  # default filter: failures only
     assert "Pipeline error: RuntimeError: boom" in r.text
     assert "राहुल" in r.text  # Devanagari reference rendered

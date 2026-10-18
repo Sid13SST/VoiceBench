@@ -31,16 +31,36 @@
 </tbody></table></div>
 <p class="legend">Each cell: scenarios passed / scenarios in the cell. Cells hold 3 to 10 scenarios, so one scenario moves a rate a lot.</p>
 
-<h2>WER and intent accuracy</h2>
+<h2>Latency and cost</h2>
+{% set o = summary.overall %}
+<p class="small">
+{% if o.n_timed %}
+  Per-utterance latency over {{ o.n_timed }} timed clips: <b>p50 {{ "%.0f"|format(o.latency_p50_ms) }} ms</b>,
+  <b>p95 {{ "%.0f"|format(o.latency_p95_ms) }} ms</b>; real-time factor (latency ÷ audio length)
+  p50 {{ "%.2f"|format(o.rtf_p50) }}, p95 {{ "%.2f"|format(o.rtf_p95) }}.
+  {% if m.warmup_runs %}Measured after {{ m.warmup_runs }} untimed warm-up call.{% else %}<b>No warm-up call</b>: the first clip includes start-up cost.{% endif %}
+  With {{ o.n_timed }} clips, p95 is close to the slowest few.
+{% else %}No timed transcriptions in this run.{% endif %}
+<br>
+{% if o.cost_usd is not none %}Cost: <b>{{ "%.2f"|format(o.cost_usd) }} USD</b>. {{ m.cost_note }}.{% else %}Cost not recorded for this run.{% endif %}
+{% if m.wall_time_s is not none %} Wall time {{ "%.0f"|format(m.wall_time_s) }} s.{% endif %}
+<br>
+{% if m.hardware %}Hardware: {{ m.hardware.cpu }}, {{ m.hardware.logical_cpus }} logical CPUs, {{ m.hardware.ram_gb }} GB RAM, {{ m.hardware.os }}. Latency only compares between runs on the same hardware.
+{% else %}Hardware not recorded for this run.{% endif %}
+</p>
+
+<h2>WER, intent accuracy and latency</h2>
 <div class="table-wrap"><table>
-<thead><tr><th>group</th><th class="num">n</th><th class="num">intent correct</th><th class="num">corpus WER</th><th class="num">pipeline errors</th></tr></thead>
+<thead><tr><th>group</th><th class="num">n</th><th class="num">intent correct</th><th class="num">corpus WER</th><th class="num">pipeline errors</th><th class="num">p50 ms</th><th class="num">p95 ms</th></tr></thead>
 <tbody>
-{% for title, groups in [("all", {"all": summary.overall}), ("language", summary.by_language), ("condition", summary.by_condition)] %}
+{% for title, groups in [("all", {"all": summary.overall}), ("language", summary.by_language), ("condition", summary.by_condition), ("domain", summary.by_domain)] %}
 {% for name, g in groups.items() %}
 <tr><td>{{ name if title == "all" else title ~ ": " ~ name }}</td><td class="num">{{ g.n }}</td>
 <td class="num">{{ "%.0f"|format(100 * g.intent_accuracy) }}%</td>
 <td class="num">{{ "%.2f"|format(g.corpus_wer) if g.corpus_wer is not none else "-" }}</td>
-<td class="num">{{ g.errors }}</td></tr>
+<td class="num">{{ g.errors }}</td>
+<td class="num">{{ "%.0f"|format(g.latency_p50_ms) if g.latency_p50_ms is not none else "-" }}</td>
+<td class="num">{{ "%.0f"|format(g.latency_p95_ms) if g.latency_p95_ms is not none else "-" }}</td></tr>
 {% endfor %}{% endfor %}
 </tbody></table></div>
 <p class="legend">WER after lower-casing and removing punctuation. Numbers and script are not rewritten, so "5000" vs "five thousand" counts as an error. WER can exceed 1 when the model adds words.</p>
