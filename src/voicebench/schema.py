@@ -254,6 +254,15 @@ class RunManifest(BaseModel):
     language_policy: Optional[str] = None
     device: Optional[str] = None
     tts_engine: Optional[str] = None
+    # Machine the run used (CPU, cores, RAM, OS, Python). Latency is only
+    # comparable between runs on the same hardware.
+    hardware: dict[str, Any] = Field(default_factory=dict)
+    # Untimed transcriptions done before the timed loop (model warm-up).
+    warmup_runs: int = Field(default=0, ge=0)
+    # Wall-clock time of the whole timed loop, including scoring.
+    wall_time_s: Optional[float] = Field(default=None, ge=0)
+    # How cost_usd was arrived at, e.g. "local inference, no per-call charge".
+    cost_note: Optional[str] = None
     # Set when transcripts were taken from an earlier run and only re-scored.
     rescored_from: Optional[str] = None
     notes: Optional[str] = None

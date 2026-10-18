@@ -89,3 +89,9 @@ def test_cli_transcribe_reports_unavailable_model(tmp_path, capsys):
 
 def test_model_revision_is_none_for_local_dir(tmp_path):
     assert FasterWhisperTranscriber(str(tmp_path)).describe()["model_revision"] is None
+
+
+def test_local_inference_cost_is_zero_and_explained():
+    asr = FasterWhisperTranscriber("small", _model=FakeWhisper([]))
+    assert asr.cost_usd(3600.0) == 0.0
+    assert "no per-call charge" in asr.cost_note and "not counted" in asr.cost_note

@@ -141,3 +141,10 @@ class FasterWhisperTranscriber:
 
     def transcribe_file(self, path: str | Path, language: Optional[str] = None) -> Transcript:
         return self.transcribe(read_wav(path), language=language)
+
+    # Local inference has no per-call charge. Electricity and the hardware
+    # itself are real costs but are not measured here.
+    cost_note = "local inference on own hardware: no per-call charge (electricity and hardware not counted)"
+
+    def cost_usd(self, audio_duration_s: float) -> float:
+        return 0.0
