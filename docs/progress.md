@@ -175,3 +175,46 @@ real-model smoke test.
   these two.
 
 **Next (day 4)**: dashboard over these run files.
+
+## Day 4 (2026-10-18)
+
+**Hyphenated-digit fix first** (the matcher gap logged on day 3)
+- `nlu/numbers.py` now joins runs of single digits written as `7-3-1-0` or
+  `3, 1, 2, 7` into one id. Multi-digit strings (`4821 5590`) stay separate.
+- Added `voicebench rescore`. It scores a saved run's transcripts again with
+  the current code, without decoding audio, and writes a new run file with
+  `rescored_from` set. It refuses if the scenario file changed.
+- Re-scored both baseline runs at `75a9e5c`. Exactly one scenario changed in
+  each: `v1-006` (English) went from fail to pass. Totals: auto 17 → 18/50,
+  hint 14 → 15/50. The original run files are kept unchanged next to the
+  re-scored ones, and the README table now says which runs it uses.
+
+**Done**
+- `dashboard/data.py`: run store (skips invalid JSON files and lists them,
+  reloads changed files), language × condition matrix, case filter, and a
+  word-level diff (equal / substituted / missed / added).
+- `dashboard/app.py` + Jinja templates: runs list; run page with metadata
+  (command, commit, model, audio), banners for fixture data, reference-text
+  runs, re-scored runs, a changed scenario file and synthetic audio; the
+  pass/fail matrix with counts and a single-colour rate bar; WER and intent
+  table; case browser with audio playback. No external assets, light and dark
+  themes, usable at phone width.
+- `voicebench dashboard` / `make run`. 167 tests pass, 1 skipped.
+
+**Did not work / fixed along the way**
+- First screenshot showed the rate bars as empty tracks: the fill was an
+  inline `<span>`, so its width was ignored. Fixed with `display: block` and
+  checked again in light, dark and 390 px-wide screenshots.
+- The audio route serves only files named like a scenario id from the
+  configured audio directory. A path-traversal attempt returns 404 (tested).
+- The dashboard assumes one audio directory (`audio/v1`) for every run. That
+  is fine while there is only v1. Runs don't record their audio directory
+  yet.
+
+**Next (day 5)**
+- Latency p50/p95 per run, after one untimed warm-up call, and real-time
+  factor.
+- Cost per run: 0 USD for local inference, stated as such, with the
+  hardware recorded.
+- Full run over all 50 scenarios with the exact command and model revision
+  saved under `results/`.

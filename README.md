@@ -4,8 +4,9 @@ A small evaluation harness for voice agents that serve Hindi, English and
 Hindi-English (code-switched) callers, including calls with background noise
 and interruptions.
 
-> **Status: day 3 of 7.** First baseline runs exist (below). The dashboard,
-> latency/cost reporting and the failure analysis are still to come.
+> **Status: day 4 of 7.** Baseline runs exist (below) and can be browsed in a
+> local dashboard (`make run`). Latency/cost reporting and the failure
+> analysis are still to come.
 
 ## First baseline (Whisper `small`, synthetic espeak-ng audio)
 
@@ -79,6 +80,12 @@ What these numbers do and don't say:
   expected slot right). Runs are saved to `results/` with the command, git
   commit, scenario hash and ASR config, and broken down by language,
   condition and domain.
+- `src/voicebench/dashboard/`: FastAPI dashboard over `results/`. It shows
+  task success by language × condition, WER and intent accuracy per group,
+  and a case browser filterable by status, language and condition. Each case
+  has a word-level diff of reference vs transcript, intent and slot errors,
+  and the audio clip. Read-only. Also serves JSON at `/api/runs` and
+  `/api/runs/{id}`.
 - `tests/`: unit tests for the schema and loader, plus tests that pin the
   makeup of `v1.jsonl`.
 
@@ -92,9 +99,11 @@ make test       # runs pytest
 make validate   # validates scenarios/v1.jsonl and prints its makeup
 make audio      # regenerates audio/v1 (needs espeak-ng: apt-get install espeak-ng)
 
+make run        # dashboard at http://127.0.0.1:8000 (PORT=... to change)
 make bench      # full run: Whisper "small", language auto-detect -> results/
 make bench POLICY=hint MODEL=/path/to/ct2-whisper   # pass the language, use local weights
 .venv/bin/voicebench report results/<run>.json
+.venv/bin/voicebench rescore results/<run>.json   # re-score saved transcripts with current code
 
 # pipeline check without ASR (reference text as transcript; not an ASR result)
 .venv/bin/voicebench run --asr oracle --out /tmp/oracle
@@ -111,7 +120,7 @@ make bench POLICY=hint MODEL=/path/to/ct2-whisper   # pass the language, use loc
 | 1 | scenario/result schema, 50 scenarios, loader, validation, tests ✅ |
 | 2 | synthetic audio via an offline TTS, noise mixing at a set SNR, local Whisper transcript adapter ✅ (adapter not yet run on real weights) |
 | 3 | runner and scoring: WER, rule-based intent/slot matching, task completion ✅ (no ASR run yet) |
-| 4 | FastAPI dashboard: pass/fail by language and condition, failing cases |
+| 4 | FastAPI dashboard: pass/fail by language and condition, failing cases ✅ |
 | 5 | latency p50/p95, cost per run, full run saved under `results/` |
 | 6 | CI, reproducibility, data notes, limitations |
 | 7 | final README, failure analysis from real results, v0.1.0 tag |
