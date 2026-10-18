@@ -110,6 +110,16 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from voicebench.dashboard.app import create_app
+
+    print(f"VoiceBench dashboard on http://{args.host}:{args.port}  (results: {args.results})")
+    uvicorn.run(create_app(args.results, args.audio), host=args.host, port=args.port, log_level="warning")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="voicebench")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -150,6 +160,13 @@ def main(argv: list[str] | None = None) -> int:
     p_rep = sub.add_parser("report", help="print the breakdown of a saved run")
     p_rep.add_argument("run")
     p_rep.set_defaults(func=_cmd_report)
+
+    p_dash = sub.add_parser("dashboard", help="serve the results dashboard")
+    p_dash.add_argument("--results", default="results")
+    p_dash.add_argument("--audio", default="audio/v1")
+    p_dash.add_argument("--host", default="127.0.0.1")
+    p_dash.add_argument("--port", type=int, default=8000)
+    p_dash.set_defaults(func=_cmd_dashboard)
 
     args = parser.parse_args(argv)
     return args.func(args)

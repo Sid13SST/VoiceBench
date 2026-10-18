@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV ?= .venv
 PY := $(VENV)/bin/python
 
-.PHONY: setup test validate audio bench clean
+.PHONY: setup test validate audio bench run clean
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -24,6 +24,11 @@ MODEL ?= small
 POLICY ?= auto
 bench:
 	$(PY) -m voicebench run --model $(MODEL) --language-policy $(POLICY) --out results
+
+HOST ?= 127.0.0.1
+PORT ?= 8000
+run:
+	$(PY) -m voicebench dashboard --host $(HOST) --port $(PORT)
 
 clean:
 	rm -rf $(VENV) build dist *.egg-info src/*.egg-info .pytest_cache
