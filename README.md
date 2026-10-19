@@ -2,22 +2,46 @@
 
 [![CI](https://github.com/Sid13SST/VoiceBench/actions/workflows/ci.yml/badge.svg)](https://github.com/Sid13SST/VoiceBench/actions/workflows/ci.yml)
 
-A small evaluation harness for voice agents that serve Hindi, English and
-Hindi-English (code-switched) callers, including calls with background noise
-and interruptions.
+A small, reproducible evaluation harness for voice agents that serve
+**Hindi, English and Hindi-English (code-switched)** callers, under
+**background noise** and **interruptions**. It runs entirely on a CPU with
+free, local tools: no API keys, no paid services.
 
-> **Status: day 6 of 7.** Full baseline runs with latency and cost are below
-> and can be browsed in a local dashboard (`make run`). CI, reproducibility
-> notes and limitations are in place. The failure analysis (day 7) is still to come.
+It turns 50 versioned caller scenarios into synthetic audio, transcribes it
+with a local Whisper model, extracts intent and slots with a rule-based
+matcher, and reports WER, task success, latency and cost. Results are broken
+down by language and condition, and a dashboard shows every failing case.
 
-## Baseline (Whisper `small`, synthetic espeak-ng audio)
+> **v0.1.0.** Every number in this README comes from a run file committed
+> under [`results/`](results/README.md) and can be reproduced with the
+> commands below. All audio is **synthetic** (espeak-ng). Please read
+> [Limitations](#limitations) before drawing conclusions about real callers.
 
-Task success means the matcher got the right intent *and* every expected
-slot from the transcript. WER is corpus-level after lower-casing and removing
-punctuation. It can go above 1.0 when the model adds words, for example when
-it gets stuck repeating a phrase. Numbers come from the day 5 runs in
-[`results/`](results/README.md) (`make bench` and `make bench POLICY=hint`,
-commit `20939304`).
+## Architecture
+
+```mermaid
+flowchart LR
+    S["scenarios/v1.jsonl<br/>50 hand-written turns<br/>(text, language, condition,<br/>expected intent + slots)"] -->|"voicebench synth<br/>espeak-ng TTS<br/>+ noise at 5/10 dB SNR<br/>+ barge-in overlay"| A["audio/v1/*.wav<br/>+ manifest (sha256, SNR)"]
+    A -->|"voicebench run<br/>faster-whisper small<br/>CPU int8, temp 0"| T["transcripts<br/>+ latency"]
+    T -->|"rule-based matcher<br/>(en / hi / romanised hi,<br/>number words)"| P["predicted<br/>intent + slots"]
+    P -->|"scoring<br/>WER, intent, slots,<br/>task success, cost"| R["results/*.json<br/>run manifest: command,<br/>commit, model revision,<br/>hardware"]
+    R --> D["voicebench report /<br/>analyze / compare"]
+    R --> W["FastAPI dashboard<br/>make run"]
+```
+
+| stage | code | notes |
+|---|---|---|
+| scenarios | `scenarios/v1.jsonl`, `src/voicebench/schema.py`, `loader.py` | pydantic validation: intent belongs to its domain, allowed slots per intent, SNR only on noise scenarios, script check per language. Conventions in [`scenarios/README.md`](scenarios/README.md). |
+| audio | `src/voicebench/audio/` | espeak-ng voices `en-us` and `hi`; seeded white / pink / babble noise mixed at an exact SNR (measured value stored per file); barge-in = caller over the agent prompt, which is 6 dB quieter. |
+| ASR | `src/voicebench/asr.py` | faster-whisper `small`, deterministic decoding, language auto-detect or hint, one untimed warm-up call. |
+| understanding | `src/voicebench/nlu/` | keyword scoring per domain intent, gazetteers, English + Hindi number words, last mention wins for self-corrections. |
+| scoring & runs | `scoring.py`, `runner.py`, `report.py`, `analysis.py`, `compare.py` | corpus WER, task success = right intent **and** every expected slot; p50/p95 latency and real-time factor; failure categories. |
+| dashboard | `src/voicebench/dashboard/` | task success by language × condition, case browser with word-level diff and audio, JSON API. Read-only. |
+
+## Results: Whisper `small` on synthetic audio
+
+From the day 5 runs (`make bench` and `make bench POLICY=hint`, commit
+`20939304`, model `Systran/faster-whisper-small@536b066`):
 
 | language | n | task success, auto-detect | task success, language hint | WER auto | WER hint |
 |----------|---|---------------------------|-----------------------------|----------|----------|
@@ -26,178 +50,135 @@ commit `20939304`).
 | hi-en    | 16 | 4/16  | 0/16  | 1.50 | 1.42 |
 | **all**  | 50 | 18/50 | 15/50 | 1.63 | 0.97 |
 
-**Latency and cost** (CPU only: 4 vCPU Xeon @ 2.10 GHz, int8, after one
-warm-up call; 50 clips, 198.9 s of audio):
-
-| run | p50 latency | p95 latency | real-time factor p50 / p95 | wall time | cost |
-|-----|-------------|-------------|----------------------------|-----------|------|
+| run | p50 latency | p95 latency | real-time factor p50 / p95 | wall time (50 clips, 198.9 s audio) | cost |
+|-----|-------------|-------------|----------------------------|-------------------------------------|------|
 | auto-detect   | 2886 ms | 11707 ms | 0.78 / 2.45 | 183 s | 0 USD |
 | language hint | 2749 ms | 10968 ms | 0.79 / 2.08 | 177 s | 0 USD |
 
-Cost is 0 USD because inference is local, with no per-call charge.
-Electricity and hardware are not counted. p95 is driven by the few clips
-where Whisper got stuck repeating itself: everything else stays near p50.
-With 50 clips, p95 is roughly the third-slowest clip. Latency only
-compares between runs on the same hardware.
+CPU only (4 vCPU Xeon @ 2.10 GHz, int8). WER is corpus-level after
+lower-casing and removing punctuation, and can exceed 1 when the model adds
+words. Cost is 0 USD because inference is local, with no per-call charge;
+electricity and hardware are not counted.
 
-What these numbers do and don't say:
+### What failed
 
-- **The audio is espeak-ng's robotic synthetic speech, not real callers.**
-  The Hindi failures may come mostly from espeak-ng's Hindi being hard to
-  understand rather than from Whisper's Hindi. This benchmark can't yet tell
-  those apart. Natural, properly licensed Hindi speech would be needed.
-- With auto-detect, Whisper didn't identify a single Hindi or Hindi-English
-  clip as Hindi. It guessed `en`, `hu`, `la`, `ro`, `de` and `ja`, and
-  wrote every transcript in Latin script.
-- With the language hint, Hindi WER drops from 3.02 to 1.12, but task
-  success barely moves (0 → 1 of 17). The words are recognised too poorly
-  for the matcher. On hi-en the hint *hurts*: Whisper writes the English
-  words in Devanagari, often misspelled ("क्रेदिट"), so the matcher misses them.
-- On the same machine, re-running gives identical transcripts. On a
-  different CPU (the day 3 runs), 22 to 33 of 50 transcripts changed, almost
-  all of them already-garbled Hindi output, while no scenario changed between
-  pass and fail. Hindi WER is therefore not a stable number across machines.
-  See [`results/README.md`](results/README.md).
-- n is 16 or 17 per language, and as small as 3 per language × condition
-  cell. Treat differences of one or two scenarios as noise.
-- Some passes are lucky. In the barge-in clip `v1-044` the transcript is
-  mostly the agent's own prompt, yet it contains "agent", so the intent
-  matches.
+Full write-up: **[`docs/failure_analysis.md`](docs/failure_analysis.md)**
+(counts reproducible with `voicebench analyze`).
+
+- **Hindi: language ID fails before recognition does.** With auto-detect,
+  none of the 33 Hindi or Hindi-English clips was identified as Hindi. They
+  came out as `en`, `hu`, `ro`, `la`, `de` or `ja`; 30 of 33 transcripts are
+  in Latin script. With the language given, all 33 are decoded as Hindi,
+  but only 1 of 17 Hindi clips passes, and 24 failures contain no
+  recognisable intent at all.
+- **Code-switching: the language hint makes it worse** (4/16 → 0/16). Auto
+  keeps English words like "cancel" and "password" in Latin script, which is
+  enough for a few lucky passes. The hint writes them in Devanagari with
+  non-standard spellings ("कान्सल", "त्रान्स्फर") that the matcher doesn't know.
+- **Repetition loops cause the p95 latency.** In both runs the 4 slowest
+  clips are ones where Whisper repeated itself ("may god be with you, may
+  god be with you, …"). Loop clips have a median latency of about 11 s;
+  every other clip finishes within 5.3 s.
+- **English (14/17)**: three failures, each with a different cause. A
+  10-digit PNR came out with only 8 digits. "From pune to mumbai" was lost in 5 dB
+  babble. In a barge-in clip, the agent prompt and the caller mixed, and the
+  matcher's tie rule chose the prompt's intent. One more barge-in clip
+  passes only by luck, from words in the leaked prompt.
+- **The cause of the Hindi failures can't be pinned down here**: these
+  results can't separate Whisper `small`'s Hindi from espeak-ng's synthetic
+  Hindi. Natural Hindi speech would be needed.
+
+## Quick start
+
+Requires Python 3.10+ and, to regenerate audio, `espeak-ng`
+(`sudo apt-get install espeak-ng`).
+
+```bash
+make setup          # .venv with the package, dev and ASR extras
+make setup-locked   # same, with the exact versions used for the committed runs (Python 3.11+)
+make test           # 189 tests pass, 1 skipped (real-model test); downloads no model
+make validate       # check scenarios/v1.jsonl and print its makeup
+make audio-check    # regenerate the audio in a temp dir and compare with audio/v1
+
+make bench                 # full run, Whisper small, language auto-detect -> results/
+make bench POLICY=hint     # pass the caller's language to Whisper
+make run                   # dashboard at http://127.0.0.1:8000
+```
+
+`make bench` downloads the Whisper weights (~480 MB) from Hugging Face on
+first use. `make bench MODEL=/path/to/ctranslate2-whisper-small` uses local
+weights instead. A full run took 3 to 7 minutes on the 4-vCPU cloud machines used here.
+
+Other commands (`.venv/bin/voicebench …`):
+
+| command | what it does |
+|---|---|
+| `report RUN` | breakdown by language, condition, language × condition, with latency |
+| `analyze RUN` | failure categories per language and condition, list of failed scenarios |
+| `compare RUN_A RUN_B` | which transcripts and which pass/fail outcomes differ |
+| `rescore RUN` | re-score saved transcripts with the current code (new run file, linked to the old one) |
+| `run --asr oracle` | pipeline check with reference text as the transcript (not an ASR result) |
+| `transcribe WAV…` | transcribe individual clips |
+| `synth SCENARIOS --out DIR [--check]` | generate audio, or verify committed audio |
 
 ## Limitations
-
-Read every number above with these in mind.
 
 **The audio**
 - **All speech is synthetic espeak-ng output**: one formant-synthesised
   (robotic-sounding) voice per language, with no accents, ages, genders or
   speaking styles. Nobody has listened to the clips to judge how
-  intelligible the Hindi is. The benchmark can't yet tell "Whisper is bad
-  at Hindi" apart from "espeak-ng Hindi is hard to recognise".
+  intelligible the Hindi is.
 - **Not telephone audio.** Clips are clean 16 kHz wideband. Real calls are
-  usually 8 kHz narrowband with codec artefacts and packet loss; none of that
-  is simulated.
-- **Noise is synthetic** (white, pink, babble made from other synthetic
-  utterances). It isn't recorded street, café or vehicle noise. SNR is
-  measured over the whole clip, including 250 ms of silence at each end.
-- **Barge-in is simplified**: the agent prompt and the caller are mixed into
-  one channel, the prompt keeps playing (no barge-in detection), and there is
-  no echo cancellation. Self-correction is only in the words.
+  usually 8 kHz narrowband with codec artefacts and packet loss; none of
+  that is simulated.
+- **Noise is synthetic** (white, pink, and babble made from other synthetic
+  utterances). SNR is measured over the whole clip, including 250 ms of
+  silence at each end.
+- **Barge-in is simplified**: one mixed channel, the agent prompt keeps
+  playing, and there is no echo cancellation. Self-correction exists only
+  in the words.
 
 **The measurement**
-- **Small n**: 50 scenarios, 16 or 17 per language, as few as 3 per language ×
-  condition cell. One scenario moves a cell's rate by up to 33 points. No
-  confidence intervals are reported, and with these counts they would be wide.
+- **Small n**: 16 or 17 scenarios per language, as few as 3 per language ×
+  condition cell. One scenario moves a cell by up to 33 points. No
+  confidence intervals are reported, and they would be wide.
 - **The matcher's lexicon was written alongside the scenarios.** It reads
-  all 50 reference texts correctly by design. Task success therefore
-  measures how much ASR errors break a matcher that understands the clean
-  text, not how well a real agent would understand new callers.
-- **The matcher is told the domain** (bank, restaurant, travel, support),
-  which makes intent detection easier than in an open-ended agent.
+  all 50 reference texts correctly by design. Scores show how much ASR
+  errors break a matcher that understands the clean text, not how a real
+  agent would cope with new callers. The matcher is also told the domain,
+  and it breaks intent ties by list order (this decided one English
+  failure, `v1-041`).
 - **WER doesn't normalise numbers or script**: "5000" vs "five thousand" and
-  English words written in Devanagari count as errors. Each transcript's
-  script is recorded so script mismatches can be counted separately.
-- **Transcripts vary across CPUs.** On one machine, runs are identical. On
-  another CPU, 22 to 33 of 50 transcripts changed (no pass/fail changed),
-  so Hindi WER isn't a stable number across machines
+  English words written in Devanagari count as errors.
+- **Transcripts vary across CPUs.** Re-runs on one machine are identical.
+  On another CPU, 22 to 33 of 50 transcripts changed (no pass/fail changed),
+  so Hindi WER isn't stable across machines
   ([details](docs/REPRODUCING.md)).
-- **Latency** is CPU-only, from one 4-vCPU cloud machine. It times only the
-  `transcribe` call (not audio I/O, the matcher or any network). It doesn't
-  represent GPU or streaming deployments.
-- **Cost 0 USD** means no per-call charge for local inference. Electricity,
-  hardware and engineering time are not counted.
-- **One ASR model** (Whisper `small`) and one decoding setup. Larger Whisper
-  models or Indian-language ASR models may do much better on Hindi; they
-  haven't been tried.
+- **Latency** is CPU-only, from one cloud machine, and times only the
+  `transcribe` call. **Cost** excludes electricity, hardware and people.
+- **One ASR model** and one decoding setup. Larger or India-focused models
+  may do much better on Hindi; they haven't been tried.
+- The optional spoof-risk adapter in the original plan was **not built**.
+  It was out of scope until everything else was finished, and no suitable
+  pretrained model was evaluated.
 
-## What exists today
+## Reproducibility and data
 
-- `src/voicebench/schema.py`: pydantic models for a **scenario** (reference
-  utterance, language, domain, acoustic condition, expected intent and slots)
-  and for **results** and run manifests. Every result is marked `measured` or
-  `fixture`, so test fixtures can never pass as real numbers.
-- `scenarios/v1.jsonl`: 50 hand-written scenarios: 30 clean, 10 noisy (5 at
-  5 dB and 5 at 10 dB SNR), 10 interruptions (barge-in and self-correction),
-  across en / hi / hi-en and banking / food / travel / support. Conventions
-  are in [`scenarios/README.md`](scenarios/README.md).
-- `src/voicebench/loader.py`: loads a JSONL file and reports every problem
-  with its line number (bad JSON, schema errors, duplicate ids, mixed versions).
-- `src/voicebench/audio/`: offline TTS through **espeak-ng**, deterministic
-  white / pink / babble noise, mixing at an exact SNR, and barge-in overlay.
-  `audio/v1/` holds the 50 generated WAVs (all synthetic) plus a manifest with
-  each file's voice, measured SNR, noise seed and sha256. Sources and licences
-  are in [`DATA_NOTES.md`](DATA_NOTES.md).
-- `src/voicebench/asr.py`: transcript adapter for a small local Whisper model
-  via faster-whisper. Decoding is deterministic (temperature 0) and it times
-  each call. No paid or remote APIs.
-- `src/voicebench/textnorm.py`, `metrics.py`: normalisation (lower case,
-  punctuation only; numbers and script are *not* rewritten) and WER via jiwer.
-  Group WER is corpus-level (total edits / total reference words).
-- `src/voicebench/nlu/`: a rule-based intent and slot matcher standing in for
-  the agent's language understanding. It handles English, Devanagari and
-  romanised Hindi, number words ("दो हज़ार" → 2000, "four eight two one" →
-  4821) and self-corrections (the last mention wins). **Its lexicon was
-  written alongside the v1 scenarios**, so v1 scores show how ASR errors
-  break a matcher that reads the clean text perfectly. They don't show how
-  the matcher would do on new phrasings.
-- `src/voicebench/scoring.py`, `runner.py`, `report.py`: per-scenario WER,
-  intent and slot correctness, and task success (right intent *and* every
-  expected slot right). Runs are saved to `results/` with the command, git
-  commit, scenario hash and ASR config, and broken down by language,
-  condition and domain.
-- `src/voicebench/dashboard/`: FastAPI dashboard over `results/`. It shows
-  task success by language × condition, WER and intent accuracy per group,
-  and a case browser filterable by status, language and condition. Each case
-  has a word-level diff of reference vs transcript, intent and slot errors,
-  and the audio clip. Read-only. Also serves JSON at `/api/runs` and
-  `/api/runs/{id}`.
-- `tests/`: unit tests for the schema and loader, plus tests that pin the
-  makeup of `v1.jsonl`.
-
-## Quick start
-
-Requires Python 3.10+.
-
-```bash
-make setup      # creates .venv and installs the package with dev extras
-make setup-locked   # same, with the exact versions used for the committed runs
-make test       # runs pytest
-make validate   # validates scenarios/v1.jsonl and prints its makeup
-make audio      # regenerates audio/v1 (needs espeak-ng: apt-get install espeak-ng)
-make audio-check    # regenerate in a temp dir and compare with the committed audio
-
-make run        # dashboard at http://127.0.0.1:8000 (PORT=... to change)
-make bench      # full run: Whisper "small", language auto-detect -> results/
-make bench POLICY=hint MODEL=/path/to/ct2-whisper   # pass the language, use local weights
-.venv/bin/voicebench report results/<run>.json
-.venv/bin/voicebench rescore results/<run>.json   # re-score saved transcripts with current code
-.venv/bin/voicebench compare results/<a>.json results/<b>.json   # which transcripts/outcomes differ
-
-# pipeline check without ASR (reference text as transcript; not an ASR result)
-.venv/bin/voicebench run --asr oracle --out /tmp/oracle
-
-# transcribe a clip (downloads Whisper "small" from huggingface.co on first use,
-# or pass --model /path/to/ctranslate2-whisper-dir)
-.venv/bin/voicebench transcribe audio/v1/v1-002.wav --model small
-```
-
-## Plan
-
-| day | scope |
-|-----|-------|
-| 1 | scenario/result schema, 50 scenarios, loader, validation, tests ✅ |
-| 2 | synthetic audio via an offline TTS, noise mixing at a set SNR, local Whisper transcript adapter ✅ |
-| 3 | runner and scoring: WER, rule-based intent/slot matching, task completion ✅ |
-| 4 | FastAPI dashboard: pass/fail by language and condition, failing cases ✅ |
-| 5 | latency p50/p95, cost per run, full run saved under `results/` ✅ |
-| 6 | CI, reproducibility, data notes, limitations ✅ |
-| 7 | final README, failure analysis from real results, v0.1.0 tag |
-
-Progress notes, including what did not work, are in
-[`docs/progress.md`](docs/progress.md). How to reproduce every committed
-number: [`docs/REPRODUCING.md`](docs/REPRODUCING.md). Data sources and
-licences: [`DATA_NOTES.md`](DATA_NOTES.md).
+- [`docs/REPRODUCING.md`](docs/REPRODUCING.md): environment, exact commands,
+  and what is and isn't reproducible. Audio regenerates byte-identically
+  with espeak-ng 1.51 and numpy 2.5; CI checks this on every push.
+- [`results/README.md`](results/README.md): provenance of every run file,
+  including the day 4 re-score after a matcher fix and the same-machine
+  re-run.
+- [`DATA_NOTES.md`](DATA_NOTES.md): source and licence of every piece of
+  data. Scenario text is hand-written, all audio is synthetic, and there
+  are no recordings of real people and no scraped or real phone data.
+- [`docs/progress.md`](docs/progress.md): day-by-day log, including what
+  didn't work: blocked model downloads, a matcher bug found in real
+  results, transcripts differing across CPUs, and one retracted claim.
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). Whisper weights (MIT) are downloaded at run
+time and not redistributed. espeak-ng (GPL-3.0) is used as an external
+program; the audio it generated is released here under MIT.
