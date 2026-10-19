@@ -347,4 +347,10 @@ real-model smoke test.
   existed, and no such model was evaluated.
 
 **Release**
-- Tag `v0.1.0` after CI is green on the release commit.
+- CI is green on the release commit `e8fab2c`. A fresh clone passes
+  `make setup`, `make test` (189 passed, 1 skipped) and `make audio-check`,
+  and `voicebench analyze` reproduces every count in the failure analysis.
+- **The `v0.1.0` tag could not be pushed from the build environment**: the
+  git proxy answers tag pushes with HTTP 403, though branch pushes work. The
+  tag exists locally on `e8fab2c` and has to be pushed from a normal
+  checkout (or created as a GitHub release on that commit).
