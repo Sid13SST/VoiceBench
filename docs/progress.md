@@ -308,3 +308,43 @@ real-model smoke test.
 - Final README with an architecture diagram and how to run.
 - Tag v0.1.0 once a clean checkout passes `make setup && make test` and CI
   is green.
+
+## Day 7 (2026-10-19)
+
+**Done**
+- `voicebench analyze`: rule-based failure categories with a fixed priority
+  order (pipeline error → wrong language → repetition loop → agent prompt
+  leak → no intent → wrong intent → slot error), plus non-exclusive flags,
+  including on passing scenarios. Tested on fixtures.
+- `docs/failure_analysis.md`: one page, written from the two day 5 run
+  files only. Main findings: auto-detect never identifies the synthetic
+  Hindi as Hindi; the language hint fixes detection but not recognition
+  (1/17); on code-switched speech the hint hurts (4/16 → 0/16) because
+  English words get non-standard Devanagari spellings; repetition loops
+  account for all latency above 5.3 s; and three English failures with
+  three different causes.
+- README rewritten for v0.1.0: Mermaid architecture diagram (rendered with
+  mermaid 11.4.1 to check it parses), results, what failed, how to run,
+  command table, limitations, reproducibility and data links.
+- Version 0.1.0 in `pyproject.toml` and `voicebench.__version__`.
+
+**Corrections made while writing**
+- The repetition-loop rule was adjusted twice after looking at these runs:
+  to catch a 5-word phrase loop (`v1-049`), and to catch a repeated
+  2-character Telugu unit (`v1-018`) without flagging long numbers. The
+  failure analysis says so.
+- First draft said `v1-041` failed because Whisper transcribed only the
+  agent prompt. The transcript actually contains part of the caller too
+  ("3,000", "transfer"), and the wrong intent comes from a 3-3 tie broken by
+  list order. Corrected in the analysis and in the README limitations.
+- Earlier README text still claimed espeak-ng Hindi is hard to understand,
+  and that every auto-detect transcript was in Latin script (it is 30 of 33).
+  Both are fixed.
+
+**Not done**
+- Optional spoof-risk adapter: skipped as planned. It was only to be
+  attempted if everything else was finished and a usable pretrained model
+  existed, and no such model was evaluated.
+
+**Release**
+- Tag `v0.1.0` after CI is green on the release commit.
