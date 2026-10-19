@@ -265,3 +265,46 @@ real-model smoke test.
   model download in CI).
 - Reproducibility notes in one place, finishing DATA_NOTES.md, and a
   limitations section in the README.
+
+## Day 6 (2026-10-19)
+
+**Done**
+- **CI** (`.github/workflows/ci.yml`): Python 3.10, 3.12 and 3.13 on
+  ubuntu-24.04. It installs espeak-ng, validates the scenarios, runs pytest,
+  checks that the committed audio regenerates, and runs the oracle pipeline
+  end to end. It downloads no model weights. First run: all three jobs green.
+  CI warned that the actions used Node 20, so they're moved to
+  `checkout@v5` / `setup-python@v6`.
+- **Python 3.10 checked locally first** (uv-installed 3.10.20): all tests
+  passed before CI was added.
+- **`synth --check` / `make audio-check`**: regenerates the audio in a
+  temporary folder and compares hashes. For files that differ, it prints the
+  largest sample difference. `--tolerance-lsb` accepts tiny differences
+  explicitly; it's 0 by default and 1 in CI.
+- **`requirements-lock.txt` + `make setup-locked`**: the exact package
+  versions of the environment that made the day 5 runs. Checked: a fresh
+  locked venv passes all tests.
+- **`docs/REPRODUCING.md`**: environment table, step-by-step commands, and a
+  table of what is and isn't reproducible.
+- **`DATA_NOTES.md`** completed: Whisper weights (MIT, revision pinned, not
+  redistributed), how the results were produced, and what isn't in the
+  repo.
+- **README**: limitations section (audio, measurement, matcher, WER
+  stability, latency scope, cost scope, one model), CI badge, links.
+
+**Found along the way**
+- With numpy 2.2.6 / scipy 1.15.3 (Python 3.10), regenerating the audio gives
+  one sample in `v1-038` that differs by 1 LSB from the committed file. The
+  file is the 10 dB babble mix, and the other 49 are byte-identical. CI's
+  3.10 job reproduced exactly that difference. With numpy 2.5 the audio was
+  byte-identical on three different CPUs: the original Xeon 2.80 GHz, today's
+  Xeon 2.10 GHz, and an AMD EPYC CI runner.
+- I had written that espeak-ng's Hindi is "hard to understand even for
+  people". Nobody has listened to the clips, so that claim was removed. The
+  docs now say only that the audio was checked mechanically.
+
+**Next (day 7)**
+- One-page failure analysis written from the day 5 run files only.
+- Final README with an architecture diagram and how to run.
+- Tag v0.1.0 once a clean checkout passes `make setup && make test` and CI
+  is green.
