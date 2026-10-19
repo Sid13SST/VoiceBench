@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install espeak-ng (TTS used to build the audio)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends espeak-ng
+          espeak-ng --version
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,asr]"
+
+      - name: Validate scenarios
+        run: voicebench validate scenarios/v1.jsonl
+
+      - name: Unit tests
+        # No Whisper weights are downloaded in CI: the real-model smoke test
+        # only runs when VOICEBENCH_ASR_MODEL is set, and it is not set here.
+        run: pytest
+
+      - name: Committed audio regenerates from the scenarios
+        run: voicebench synth scenarios/v1.jsonl --out audio/v1 --check --tolerance-lsb 1
+
+      - name: End-to-end pipeline check with reference text (not an ASR result)
+        run: voicebench run --asr oracle --out "$RUNNER_TEMP/oracle"
