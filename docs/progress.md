@@ -350,7 +350,9 @@ real-model smoke test.
 - CI is green on the release commit `e8fab2c`. A fresh clone passes
   `make setup`, `make test` (189 passed, 1 skipped) and `make audio-check`,
   and `voicebench analyze` reproduces every count in the failure analysis.
-- **The `v0.1.0` tag could not be pushed from the build environment**: the
-  git proxy answers tag pushes with HTTP 403, though branch pushes work. The
-  tag exists locally on `e8fab2c` and has to be pushed from a normal
-  checkout (or created as a GitHub release on that commit).
+- The `v0.1.0` tag could not be pushed from the build environment: the git
+  proxy answers tag pushes with HTTP 403, though branch pushes work. The tag
+  was then created through a GitHub release ("VoiceBench v0.1.0") on
+  `e8fab2c`. Checked afterwards: a clone of the tag reports version 0.1.0,
+  passes `make setup` and `make test` (189 passed, 1 skipped), regenerates
+  the audio byte-identically, and reproduces the README numbers.
