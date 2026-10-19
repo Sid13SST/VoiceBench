@@ -3,6 +3,7 @@ import pytest
 
 from voicebench.audio.noise import babble_noise, make_noise, pink_noise, white_noise
 from voicebench.audio.signal import (
+    max_sample_diff,
     fit_length,
     mix_at_snr,
     overlay,
@@ -97,3 +98,17 @@ def test_resample_and_wav_roundtrip(tmp_path):
     back = read_wav(path)  # resampled to 16 kHz on read
     assert len(back) == SR
     assert np.corrcoef(back[100:-100], x[100:-100])[0, 1] > 0.99
+
+
+def test_max_sample_diff(tmp_path):
+    x = tone(0.1)
+    write_wav(tmp_path / "a.wav", x)
+    write_wav(tmp_path / "b.wav", x)
+    assert max_sample_diff(tmp_path / "a.wav", tmp_path / "b.wav") == 0
+    y = x.copy()
+    y[10] += 3 / 32767
+    write_wav(tmp_path / "c.wav", y)
+    assert max_sample_diff(tmp_path / "a.wav", tmp_path / "c.wav") == 3
+    write_wav(tmp_path / "d.wav", x[:-1])
+    with pytest.raises(ValueError):
+        max_sample_diff(tmp_path / "a.wav", tmp_path / "d.wav")

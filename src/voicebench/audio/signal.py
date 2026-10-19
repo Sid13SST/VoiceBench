@@ -79,3 +79,12 @@ def overlay(base: np.ndarray, top: np.ndarray, offset: int, top_gain_db: float =
     out[: len(base)] += base
     out[offset : offset + len(top)] += top * (10 ** (top_gain_db / 20))
     return out
+
+
+def max_sample_diff(a: str | Path, b: str | Path) -> int:
+    """Largest absolute difference between two 16-bit WAVs, in integer steps."""
+    x, sr_x = sf.read(str(a), dtype="int16")
+    y, sr_y = sf.read(str(b), dtype="int16")
+    if sr_x != sr_y or x.shape != y.shape:
+        raise ValueError(f"different length or sample rate ({x.shape}@{sr_x} vs {y.shape}@{sr_y})")
+    return int(np.max(np.abs(x.astype(np.int32) - y.astype(np.int32)), initial=0))
