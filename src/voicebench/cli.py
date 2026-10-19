@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from voicebench.loader import ScenarioFileError, file_sha256, load_scenarios, summarize
 
@@ -27,22 +28,55 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_synth(args: argparse.Namespace) -> int:
+    import json
+    import tempfile
+
     from voicebench.audio.build import build_all
     from voicebench.audio.tts import EspeakTTS, TTSUnavailable
 
     scenarios = load_scenarios(args.path)
     command = f"voicebench synth {args.path} --out {args.out}"
+    tmp = tempfile.TemporaryDirectory() if args.check else None
+    out = tmp.name if tmp else args.out
     try:
         manifest = build_all(
-            scenarios, args.out, EspeakTTS(),
+            scenarios, out, EspeakTTS(),
             scenarios_file=args.path, scenarios_sha256=file_sha256(args.path), command=command,
         )
     except TTSUnavailable as exc:
         print(exc, file=sys.stderr)
         return 1
-    total = sum(f["duration_s"] for f in manifest["files"])
-    print(f"wrote {len(manifest['files'])} files ({total:.1f} s of audio) to {args.out} with {manifest['tts_engine']}")
-    return 0
+    if not args.check:
+        total = sum(f["duration_s"] for f in manifest["files"])
+        print(f"wrote {len(manifest['files'])} files ({total:.1f} s of audio) to {args.out} with {manifest['tts_engine']}")
+        return 0
+
+    from voicebench.audio.signal import max_sample_diff
+
+    committed = json.loads((Path(args.out) / "manifest.json").read_text(encoding="utf-8"))
+    want = {f["id"]: f["sha256"] for f in committed["files"]}
+    got = {f["id"]: f["sha256"] for f in manifest["files"]}
+    mismatched = sorted(i for i in want.keys() | got.keys() if want.get(i) != got.get(i))
+    print(f"regenerated with {manifest['tts_engine']} (committed: {committed['tts_engine']})")
+    worst = 0
+    for i in mismatched:
+        try:
+            diff = max_sample_diff(Path(args.out) / f"{i}.wav", Path(out) / f"{i}.wav")
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"  {i}: {exc}")
+            diff = None
+        else:
+            print(f"  {i}: differs, max sample difference {diff} LSB (16-bit)")
+        worst = max(worst, diff if diff is not None else 10**9)
+    tmp.cleanup()
+    if not mismatched:
+        print(f"all {len(want)} files are byte-identical to {args.out}/manifest.json")
+        return 0
+    if worst <= args.tolerance_lsb:
+        print(f"{len(mismatched)}/{len(want)} files differ, all within {args.tolerance_lsb} LSB: accepted")
+        return 0
+    print(f"{len(mismatched)}/{len(want)} files differ from {args.out}/manifest.json")
+    return 1
 
 
 def _cmd_transcribe(args: argparse.Namespace) -> int:
@@ -145,6 +179,10 @@ def main(argv: list[str] | None = None) -> int:
     p_synth = sub.add_parser("synth", help="generate synthetic audio for every scenario")
     p_synth.add_argument("path")
     p_synth.add_argument("--out", required=True)
+    p_synth.add_argument("--check", action="store_true",
+                         help="regenerate into a temp dir and compare hashes with OUT/manifest.json; writes nothing")
+    p_synth.add_argument("--tolerance-lsb", type=int, default=0,
+                         help="with --check: accept files whose samples differ by at most this many 16-bit steps")
     p_synth.set_defaults(func=_cmd_synth)
 
     p_tr = sub.add_parser("transcribe", help="transcribe WAV files with a local Whisper model")

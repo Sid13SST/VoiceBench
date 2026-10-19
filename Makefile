@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV ?= .venv
 PY := $(VENV)/bin/python
 
-.PHONY: setup test validate audio bench run clean
+.PHONY: setup test validate audio audio-check bench run clean
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -17,6 +17,9 @@ validate:
 
 audio:
 	$(PY) -m voicebench synth scenarios/v1.jsonl --out audio/v1
+
+audio-check:
+	$(PY) -m voicebench synth scenarios/v1.jsonl --out audio/v1 --check
 
 # Full benchmark with the baseline ASR. Downloads Whisper "small" from
 # huggingface.co on first use. MODEL=/path/to/ct2-dir to use local weights.

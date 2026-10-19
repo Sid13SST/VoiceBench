@@ -1,6 +1,7 @@
 """The committed audio must match its manifest and the current scenario file."""
 
 import hashlib
+import shutil
 import json
 from pathlib import Path
 
@@ -36,3 +37,16 @@ def test_noise_files_hit_target_snr(manifest):
     for f in manifest["files"]:
         if f["condition"] == "noise":
             assert abs(f["measured_snr_db"] - f["target_snr_db"]) < 0.01, f["id"]
+
+
+@pytest.mark.skipif(shutil.which("espeak-ng") is None, reason="espeak-ng not installed")
+def test_committed_audio_regenerates(capsys):
+    """Regenerating from the scenarios reproduces the committed audio.
+
+    Allows 1 LSB because numpy releases round a few float operations
+    differently (seen on numpy 2.2 vs 2.5: one sample in v1-038).
+    """
+    from voicebench.cli import main
+
+    code = main(["synth", str(ROOT / "scenarios" / "v1.jsonl"), "--out", str(AUDIO), "--check", "--tolerance-lsb", "1"])
+    assert code == 0, capsys.readouterr().out
