@@ -34,9 +34,32 @@ Where every piece of data in this repo comes from, and under what terms.
   `audio/v1/manifest.json`. Barge-in clips place the caller over the agent
   prompt at `caller_onset_ms`, with the agent at -6 dB relative to the caller.
 - **Reproduce**: `make audio` (or `voicebench synth scenarios/v1.jsonl --out audio/v1`).
-  With the same espeak-ng version, regenerating gives byte-identical files
-  (checked on 2026-10-16). A different espeak-ng version may give different
-  audio, so the manifest stores each file's sha256.
+  `make audio-check` regenerates the audio in a temporary folder and compares
+  it with the manifest. CI runs that check on every push. Details, including
+  a 1-sample difference seen with older numpy, are in
+  [`docs/REPRODUCING.md`](docs/REPRODUCING.md).
+
+## Model weights (not in the repo)
+
+- **Whisper `small`** (OpenAI), MIT licence, in the CTranslate2 conversion
+  `Systran/faster-whisper-small` (MIT), revision
+  `536b0662742c02347bc0e980a01041f333bce120`. Downloaded from Hugging Face
+  at run time into the local cache. Never committed or redistributed here.
+- Software used to run it: faster-whisper (MIT) and CTranslate2 (MIT).
+
+## Results: `results/*.json`
+
+- Transcripts in the run files are Whisper's output on the synthetic audio
+  above. They contain no personal data: all input text is invented.
+- Run files are written by `voicebench run` / `rescore` and never edited by
+  hand. Their exact provenance is in [`results/README.md`](results/README.md).
+
+## What is *not* in this repo
+
+- No recordings of real people, no real phone calls, no scraped audio or text.
+- No third-party speech datasets. Natural, licensed Hindi speech would make
+  the benchmark much more meaningful (see the README limitations), but none
+  has been added yet.
 
 ## What this audio is *not*
 
