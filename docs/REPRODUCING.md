@@ -61,7 +61,7 @@ warm-up count and wall time.
 
 | | same machine | different CPU |
 |---|---|---|
-| audio (same espeak-ng + packages) | identical | identical (generation is pure Python + espeak-ng) |
+| audio (espeak-ng 1.51) | identical | identical with numpy 2.5 on three CPUs (Xeon 2.80 GHz where it was made, Xeon 2.10 GHz, AMD EPYC in CI); with numpy 2.2 (Python 3.10, locally and in CI), one sample of `v1-038` differs by 1 LSB |
 | transcripts | **identical** (0/50 differ on re-run) | **differ**: 22/50 (auto) and 33/50 (hint) between the day 3 and day 5 machines |
 | pass/fail per scenario | identical | identical in the one comparison made (0 changes) |
 | WER | identical | Hindi corpus WER moved from 4.30 to 3.02 (auto) |
