@@ -149,6 +149,15 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_analyze(args: argparse.Namespace) -> int:
+    from voicebench.analysis import analyse_run, format_analysis
+    from voicebench.runner import load_run
+
+    run = load_run(args.run)
+    print(format_analysis(analyse_run(run, load_scenarios(run.scenarios_file))))
+    return 0
+
+
 def _cmd_report(args: argparse.Namespace) -> int:
     from voicebench.report import format_table, summarise
     from voicebench.runner import load_run
@@ -213,6 +222,10 @@ def main(argv: list[str] | None = None) -> int:
     p_cmp.add_argument("a")
     p_cmp.add_argument("b")
     p_cmp.set_defaults(func=_cmd_compare)
+
+    p_an = sub.add_parser("analyze", help="categorise the failures of a saved run")
+    p_an.add_argument("run")
+    p_an.set_defaults(func=_cmd_analyze)
 
     p_rep = sub.add_parser("report", help="print the breakdown of a saved run")
     p_rep.add_argument("run")
