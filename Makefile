@@ -2,12 +2,19 @@ PYTHON ?= python3
 VENV ?= .venv
 PY := $(VENV)/bin/python
 
-.PHONY: setup test validate audio audio-check bench run clean
+.PHONY: setup setup-locked test validate audio audio-check bench run clean
 
 setup:
 	$(PYTHON) -m venv $(VENV)
 	$(PY) -m pip install --upgrade pip
 	$(PY) -m pip install -e ".[dev,asr]"
+
+# Same package versions as the committed day 5 runs (Python 3.13).
+setup-locked:
+	$(PYTHON) -m venv $(VENV)
+	$(PY) -m pip install --upgrade pip
+	$(PY) -m pip install -r requirements-lock.txt
+	$(PY) -m pip install --no-deps -e .
 
 test:
 	$(PY) -m pytest
