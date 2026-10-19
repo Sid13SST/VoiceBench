@@ -63,7 +63,9 @@ Where every piece of data in this repo comes from, and under what terms.
 
 ## What this audio is *not*
 
-espeak-ng sounds clearly robotic, and its Hindi is far from natural Indian
-speech. Results on this audio measure how an ASR model copes with *this
+espeak-ng is a formant synthesiser and is generally described as robotic.
+Its output is very different from natural Indian speech. The clips have
+been checked mechanically (length, level, SNR, hashes), but nobody has
+listened to them to rate intelligibility. Results on this audio measure how an ASR model copes with *this
 synthetic speech*. They are not an estimate of accuracy on real callers. See
 the limitations section of the README.
