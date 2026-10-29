@@ -12,7 +12,8 @@ Rules, all of them deliberately simple:
   highest score wins, ties go to the first-listed intent, and a zero score
   means no intent.
 - most slots: the *last* mention wins, which handles self-corrections
-  ("two thousand no sorry four thousand" -> 4000).
+  ("two thousand no sorry four thousand" -> 4000). A number introduced by
+  an account, card, order, PNR or number word is not an amount.
 - device and issue: the first mention wins (the device named first is the
   subject: "my phone's app is not loading" -> phone).
 - source city: the city after "from" or before "से"; destination: the last
@@ -145,13 +146,36 @@ def _date(tokens: list[str], numbers: list[NumberSpan]) -> str | None:
     return max(found)[1] if found else None
 
 
+# A digit string this long a few words after a marker is an id, not an
+# amount: 9 digits is the shortest Indian account number (cards have 16,
+# PNRs 10), and an amount said as digits is far shorter.
+_ID_MIN_DIGITS = 9
+_ID_WINDOW = 3
+
+
+def _is_id_number(n: NumberSpan, tokens: list[str], numbers: list[NumberSpan]) -> bool:
+    """n is introduced by an account/card/order/PNR/number word, so it is not an amount."""
+    if n.start > 0 and tokens[n.start - 1] in lx.ID_NUMBER_MARKERS:
+        return True
+    if not (n.digit_sequence and len(n.value) >= _ID_MIN_DIGITS):
+        return False
+    in_number = {k for m in numbers for k in range(m.start, m.end)}
+    for k in range(n.start - 1, max(n.start - 1 - _ID_WINDOW, -1), -1):
+        if k in in_number:
+            return False
+        if tokens[k] in lx.ID_NUMBER_MARKERS:
+            return True
+    return False
+
+
 def extract_slots(intent: str, domain: Domain, tokens: list[str], text: str) -> dict[str, str]:
     allowed = INTENTS[domain][intent]
     numbers = find_numbers(tokens)
     slots: dict[str, str | None] = {}
 
     if "amount" in allowed:
-        slots["amount"] = numbers[-1].value if numbers else None
+        amounts = [n for n in numbers if not _is_id_number(n, tokens, numbers)]
+        slots["amount"] = amounts[-1].value if amounts else None
     if "recipient" in allowed:
         slots["recipient"] = _last(find_mentions(tokens, lx.BENEFICIARIES))
     if "account_type" in allowed:

@@ -102,6 +102,11 @@ CITIES = {
 }
 SOURCE_MARKERS_BEFORE = {"from"}  # "from delhi"
 SOURCE_MARKERS_AFTER = {"से", "se"}  # "दिल्ली से"
+# Words that introduce an id rather than an amount: "from account 1234".
+ID_NUMBER_MARKERS = {
+    "account", "acct", "खाता", "खाते", "अकाउंट", "एकाउंट", "khata", "khaata", "khate",
+    "card", "कार्ड", "order", "ऑर्डर", "आर्डर", "pnr", "पीएनआर", "number", "नंबर", "नम्बर",
+}
 WEEKDAYS = {
     "monday": ["monday", "सोमवार", "somvar"],
     "tuesday": ["tuesday", "मंगलवार", "mangalvar"],

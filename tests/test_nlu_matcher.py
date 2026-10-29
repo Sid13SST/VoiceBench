@@ -149,3 +149,32 @@ def test_other_unicode_digits_are_not_an_order_id(text):
 )
 def test_digit_groups_join_into_one_id(text, domain, slots):
     assert match(text, domain).slots == slots
+
+
+@pytest.mark.parametrize(
+    "text, amount",
+    [
+        ("transfer five thousand to rahul from account 1234", "5000"),
+        ("send 5000 from card 4321 to rahul", "5000"),
+        ("send 2000 to rahul account number 4521", "2000"),
+        ("send 2000 to rahul, account ending with 123456789012", "2000"),  # long id after the marker
+        ("send 2000 to rahul, order 7310", "2000"),
+        ("send 2000 to rahul, pnr 4521378690", "2000"),
+        ("राहुल को 5000 भेजो खाता नंबर 1234", "5000"),
+        # unchanged
+        ("send 5000 to rahul", "5000"),
+        ("send 1.5 lakh to rahul", "150000"),
+        ("transfer five thousand to rahul", "5000"),
+        ("Send 2000, no sorry, 4000 rupees to Vikram.", "4000"),
+        ("I'm at your 1500 rupees transfer card war", "1500"),  # v1-022 transcript: marker after the amount
+        # a short number a few words after a marker is still an amount
+        ("from my account send 5000 to rahul", "5000"),
+    ],
+)
+def test_account_card_order_numbers_are_not_amounts(text, amount):
+    assert match(text, "banking").slots.get("amount") == amount
+
+
+def test_only_an_account_number_gives_no_amount():
+    p = match("transfer to rahul from account 1234", "banking")
+    assert "amount" not in p.slots and p.slots["recipient"] == "rahul"
