@@ -6,6 +6,8 @@ the command, git commit, scenario-file sha256 and ASR config. They are
 written by `voicebench run` and never edited by hand. `voicebench report
 <file>` prints the breakdown.
 
+The 2026-10-29 runs (`20261029T*`: re-runs at `0f996db` with rescores at `f430675`, and runs at `f4306752`) are described in [`docs/rerun_comparison.md`](../docs/rerun_comparison.md) and [`docs/benchmark_current_main.md`](../docs/benchmark_current_main.md).
+
 ## Day 5 runs (current)
 
 | file | command |
