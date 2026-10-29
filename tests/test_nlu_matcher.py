@@ -81,6 +81,27 @@ def test_unparseable_slot_is_omitted_not_guessed():
     assert "amount" not in p.slots and p.slots["recipient"] == "rahul"
 
 
+@pytest.mark.parametrize(
+    "text, amount",
+    [
+        ("send 1.5 lakh to rahul", "150000"),
+        ("Send 2.5 thousand to Rahul.", "2500"),
+        ("rahul ko 1.5 लाख भेजो", "150000"),
+        ("rahul ko १.५ हज़ार भेजो", "1500"),
+        ("send 1.25 lakh to rahul", "125000"),
+        ("send 2.5 hundred to rahul", "250"),
+    ],
+)
+def test_decimal_amount_with_multiplier(text, amount):
+    assert match(text, "banking").slots.get("amount") == amount
+
+
+@pytest.mark.parametrize("text", ["send 2.5 to rahul", "send rs 250.50 to rahul", "send 1.2345 thousand to rahul"])
+def test_decimal_that_is_not_a_whole_amount_gives_no_amount(text):
+    p = match(text, "banking")
+    assert "amount" not in p.slots and p.slots["recipient"] == "rahul"
+
+
 V1 = Path(__file__).resolve().parents[1] / "scenarios" / "v1.jsonl"
 
 
