@@ -53,12 +53,20 @@ From the day 5 runs (`make bench` and `make bench POLICY=hint`, commit
 | run | p50 latency | p95 latency | real-time factor p50 / p95 | wall time (50 clips, 198.9 s audio) | cost |
 |-----|-------------|-------------|----------------------------|-------------------------------------|------|
 | auto-detect   | 2886 ms | 11707 ms | 0.78 / 2.45 | 183 s | 0 USD |
-| language hint | 2749 ms | 10968 ms | 0.79 / 2.08 | 177 s | 0 USD |
+| language hint | 2748 ms | 10968 ms | 0.79 / 2.08 | 177 s | 0 USD |
 
 CPU only (4 vCPU Xeon @ 2.10 GHz, int8). WER is corpus-level after
 lower-casing and removing punctuation, and can exceed 1 when the model adds
 words. Cost is 0 USD because inference is local, with no per-call charge;
 electricity and hardware are not counted.
+
+The WER and latency figures above were measured on that original machine
+and remain the documented baseline. A later run on a different machine
+(Xeon @ 2.80 GHz, same model revision, same audio) reproduced task success
+exactly (18/50 auto, 15/50 hint) but gave different WER and latency values:
+all-clips WER 2.05 auto (documented 1.63) and 0.93 hint (documented 0.97),
+p50 latency about 3.6 to 3.8 s (documented about 2.8 s). The cause of the
+difference was not isolated.
 
 ### What failed
 
@@ -83,7 +91,11 @@ Full write-up: **[`docs/failure_analysis.md`](docs/failure_analysis.md)**
   10-digit PNR came out with only 8 digits. "From pune to mumbai" was lost in 5 dB
   babble. In a barge-in clip, the agent prompt and the caller mixed, and the
   matcher's tie rule chose the prompt's intent. One more barge-in clip
-  passes only by luck, from words in the leaked prompt.
+  (`v1-044`, "no just get me a human agent") passes although its transcript
+  mixes the prompt and the caller: "Your call is important to us because we
+  are human agents." The only intent keyword found is "human", from the
+  caller's words; the prompt contributes neither "agent" nor "human", and
+  "agents" does not match the keyword "agent".
 - **The cause of the Hindi failures can't be pinned down here**: these
   results can't separate Whisper `small`'s Hindi from espeak-ng's synthetic
   Hindi. Natural Hindi speech would be needed.
@@ -96,7 +108,7 @@ Requires Python 3.10+ and, to regenerate audio, `espeak-ng`
 ```bash
 make setup          # .venv with the package, dev and ASR extras
 make setup-locked   # same, with the exact versions used for the committed runs (Python 3.11+)
-make test           # 189 tests pass, 1 skipped (real-model test); downloads no model
+make test           # 205 tests pass, 1 skipped (real-model test); downloads no model
 make validate       # check scenarios/v1.jsonl and print its makeup
 make audio-check    # regenerate the audio in a temp dir and compare with audio/v1
 

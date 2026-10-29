@@ -17,7 +17,7 @@ an API key or costs money.
 ```bash
 sudo apt-get install espeak-ng      # only needed to (re)generate audio
 make setup-locked                   # exact versions (Python 3.11+); or `make setup` for any 3.10+
-make test                           # 176 tests; no model download
+make test                           # 205 pass, 1 skipped (real-model test); no model download
 ```
 
 ## 2. Scenarios → audio
