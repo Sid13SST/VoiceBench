@@ -22,6 +22,8 @@ from voicebench.textnorm import tokens
         # food
         ("Order number 4821, where is it?", "food", "track_order", {"order_id": "4821"}),
         ("I want two masala dosa", "food", "order_food", {"item": "masala dosa", "quantity": "2"}),
+        ("I want 2 masala dosa", "food", "order_food", {"item": "masala dosa", "quantity": "2"}),
+        ("2 masala dosa, no wait, make that 3", "food", "order_food", {"item": "masala dosa", "quantity": "3"}),
         ("cancel my order 7310", "food", "cancel_order", {"order_id": "7310"}),
         # travel
         ("Book a flight from Bangalore to Delhi on Friday", "travel", "book_ticket",

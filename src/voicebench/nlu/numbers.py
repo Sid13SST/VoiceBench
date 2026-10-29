@@ -3,7 +3,10 @@
 Two readings are produced for each maximal run of number tokens:
 
 - a run of two or more single-digit words ("four eight two one",
-  "दो दो नौ") is read digit by digit -> "4821" (order ids, PNRs);
+  "दो दो नौ") is read digit by digit -> "4821" (order ids, PNRs), and so
+  is a run of digit strings ("4821", "7 3 1 0") - except a lone numeral
+  of one or two digits ("2", "12") with no digit string next to it,
+  which is a quantity;
 - anything else is read as a quantity -> "fifteen hundred" = 1500,
   "दो हज़ार" = 2000.
 
@@ -87,6 +90,15 @@ def _quantity(tokens: list[str]) -> int:
     return total + current
 
 
+def _lone_small_numeral(tokens: list[str], i: int, j: int) -> bool:
+    """tokens[i:j] is one 1-2 digit string ("2", "12"), not part of a longer digit group."""
+    if j - i != 1 or _token_kind(tokens[i]) != "digits":
+        return False
+    tok = tokens[i]
+    neighbours = [tokens[k] for k in (i - 1, j) if 0 <= k < len(tokens)]
+    return len(tok) <= 2 and tok[0] not in "0०" and all(_token_kind(t) != "digits" for t in neighbours)
+
+
 def find_numbers(tokens: list[str]) -> list[NumberSpan]:
     spans: list[NumberSpan] = []
     i = 0
@@ -115,7 +127,9 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
         if len(run) == 1 and run[0] in _DO_WORDS and i > 0 and tokens[i - 1] in _LIGHT_VERBS:
             i = j
             continue
-        if all(_token_kind(t) == "digits" for t in run):
+        if _lone_small_numeral(tokens, i, j):
+            spans.append(NumberSpan(i, j, run[0].translate(_DEV_DIGITS), digit_sequence=False))
+        elif all(_token_kind(t) == "digits" for t in run):
             spans.append(NumberSpan(i, j, "".join(run).translate(_DEV_DIGITS), digit_sequence=True))
         elif len(run) >= 2 and all(t in UNITS and UNITS[t] <= 9 for t in run):
             spans.append(NumberSpan(i, j, "".join(str(UNITS[t]) for t in run), digit_sequence=True))

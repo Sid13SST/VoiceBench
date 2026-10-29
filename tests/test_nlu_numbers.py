@@ -27,6 +27,9 @@ def values(text):
         ("4821 5590", [("4821", True), ("5590", True)]),  # multi-digit strings stay separate
         ("पीएनआर ४५२१", [("4521", True)]),
         ("rs 5000", [("5000", True)]),
+        ("i want 2 masala dosa", [("2", False)]),  # a lone numeral is a quantity, not an id
+        ("12 idli", [("12", False)]),
+        ("order 2 7 3", [("273", True)]),  # spaced single digits still join into an id
         ("two masala dosa wait make that three", [("2", False), ("3", False)]),
         ("एक वेज बिरयानी", [("1", False)]),
         ("twenty december", [("20", False)]),
