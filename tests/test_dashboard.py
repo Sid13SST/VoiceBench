@@ -188,7 +188,7 @@ def _write_run(tmp_path, m, drop_understander=False):
 def _understander_cell(html, run_id):
     """The understander cell of one row of the run list."""
     row = html.split(f'href="/runs/{run_id}"', 1)[1].split("</tr>", 1)[0]
-    return row.split("</td>")[4]
+    return row.split("</td>")[1]
 
 
 def test_api_runs_includes_the_understander(fixture_repo, tmp_path):

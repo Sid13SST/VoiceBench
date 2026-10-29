@@ -10,11 +10,12 @@
 <p>No runs yet. Create one with <code>make bench</code>.</p>
 {% else %}
 <div class="table-wrap"><table>
-<thead><tr><th>run</th><th>ASR</th><th>language</th><th>kind</th><th>understander</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
+<thead><tr><th>run</th><th>understander</th><th>ASR</th><th>language</th><th>kind</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
 <tbody>
 {% for row in rows %}{% set m = row.entry.manifest %}
 <tr>
   <td><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+  <td class="small">{{ ui.understander(m.understander) }}</td>
   <td>{{ m.asr_model }}</td>
   <td>{{ m.language_policy or "-" }}</td>
   <td class="small">
@@ -22,7 +23,6 @@
     {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}
     {% if not row.hash_ok %}<br><b>scenario file changed since run</b>{% endif %}
   </td>
-  <td class="small">{{ ui.understander(m.understander) }}</td>
   <td class="num">{{ row.overall.task_success }}/{{ row.overall.n }}</td>
   <td class="num">{{ "%.2f"|format(row.overall.corpus_wer) if row.overall.corpus_wer is not none else "-" }}</td>
 </tr>
