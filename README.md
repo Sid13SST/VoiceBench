@@ -108,7 +108,7 @@ Requires Python 3.10+ and, to regenerate audio, `espeak-ng`
 ```bash
 make setup          # .venv with the package, dev and ASR extras
 make setup-locked   # same, with the exact versions used for the committed runs (Python 3.11+)
-make test           # 205 tests pass, 1 skipped (real-model test); downloads no model
+make test           # with espeak-ng installed: 271 pass, 1 skipped (real-model test); without it 266 pass, 6 skipped (5 need espeak-ng); downloads no model
 make validate       # check scenarios/v1.jsonl and print its makeup
 make audio-check    # regenerate the audio in a temp dir and compare with audio/v1
 
