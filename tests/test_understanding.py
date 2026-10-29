@@ -9,6 +9,7 @@ import pytest
 from conftest import make_scenario
 from voicebench.asr import Transcript
 from voicebench.audio.signal import write_wav
+from voicebench.cli import main
 from voicebench.nlu.matcher import match
 from voicebench.runner import ReferenceTranscriber, UnderstanderMismatch, load_run, rescore, run, save
 from voicebench.schema import ResultSource, Scenario
@@ -190,3 +191,45 @@ def test_load_understander():
         load_understander("no_such_module_xyz:fn")
     assert understander_id(None) == BUILTIN
     assert understander_id(stub_understand) == SPEC
+
+
+def _write_run(setup, tmp_path, *args):
+    scenarios, sfile, audio = setup
+    out = tmp_path / "r"
+    assert main(["run", "--asr", "oracle", "--scenarios", str(sfile), "--audio", str(audio),
+                 "--out", str(out), "--command", "pytest", *args]) == 0
+    (path,) = out.glob("*.json")
+    return path
+
+
+def test_cli_run_and_rescore_with_understander(setup, tmp_path, capsys):
+    path = _write_run(setup, tmp_path, "--understander", SPEC)
+    m = load_run(path)
+    assert m.understander == SPEC
+    assert [r.task_success for r in m.results] == [False, True, False]
+    assert m.results[2].error == "UnderstanderError: RuntimeError: stub exploded"
+    assert f"understander={SPEC}" in capsys.readouterr().out
+
+    out = tmp_path / "rescored"
+    assert main(["rescore", str(path), "--out", str(out)]) == 1
+    assert "refusing to rescore" in capsys.readouterr().err and not out.exists()
+    assert main(["rescore", str(path), "--out", str(out), "--understander", SPEC]) == 0
+    (again,) = out.glob("*.json")
+    assert load_run(again).understander == SPEC
+
+
+def test_cli_builtin_run_refuses_rescore_with_understander(setup, tmp_path, capsys):
+    path = _write_run(setup, tmp_path)
+    assert load_run(path).understander == BUILTIN
+    assert "understander=" not in capsys.readouterr().out
+    out = tmp_path / "rescored"
+    assert main(["rescore", str(path), "--out", str(out), "--understander", SPEC]) == 1
+    assert "'builtin'" in capsys.readouterr().err and not out.exists()
+
+
+def test_cli_bad_understander_spec(setup, tmp_path, capsys):
+    scenarios, sfile, audio = setup
+    code = main(["run", "--asr", "oracle", "--scenarios", str(sfile), "--audio", str(audio),
+                 "--out", str(tmp_path / "r"), "--understander", "no_such_module_xyz:fn"])
+    assert code == 2 and "could not load understander" in capsys.readouterr().err
+    assert not (tmp_path / "r").exists()

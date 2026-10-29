@@ -93,11 +93,27 @@ def _cmd_transcribe(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_understander(spec):
+    """None for the built-in matcher, the imported callable, or False after printing why not."""
+    if spec is None:
+        return None
+    from voicebench.understanding import load_understander
+
+    try:
+        return load_understander(spec)
+    except Exception as exc:  # bad spec, import error, or an error raised by the module itself
+        print(f"could not load understander {spec!r}: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return False
+
+
 def _cmd_run(args: argparse.Namespace) -> int:
     from voicebench.asr import ASRUnavailable, FasterWhisperTranscriber
     from voicebench.report import format_table, summarise
     from voicebench.runner import ReferenceTranscriber, run, save
 
+    understand = _load_understander(args.understander)
+    if understand is False:
+        return 2
     scenarios = load_scenarios(args.scenarios)
     if args.asr == "oracle":
         transcriber = ReferenceTranscriber()
@@ -109,6 +125,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
             scenarios, args.audio, transcriber, args.scenarios, command,
             language_policy=args.language_policy,
             progress=(lambda m: print(m, file=sys.stderr)) if args.verbose else None,
+            understand=understand, understander=args.understander,
         )
     except ASRUnavailable as exc:
         print(exc, file=sys.stderr)
@@ -121,14 +138,22 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 def _cmd_rescore(args: argparse.Namespace) -> int:
     from voicebench.report import format_table, summarise
-    from voicebench.runner import load_run, rescore, save
+    from voicebench.runner import UnderstanderMismatch, load_run, rescore, save
 
+    understand = _load_understander(args.understander)
+    if understand is False:
+        return 2
     previous = load_run(args.run)
     scenarios = load_scenarios(previous.scenarios_file)
     if file_sha256(previous.scenarios_file) != previous.scenarios_sha256:
         print("scenario file changed since this run; refusing to rescore", file=sys.stderr)
         return 1
-    manifest = rescore(previous, scenarios, " ".join(["voicebench", *sys.argv[1:]]))
+    try:
+        manifest = rescore(previous, scenarios, " ".join(["voicebench", *sys.argv[1:]]),
+                           understand=understand, understander=args.understander)
+    except UnderstanderMismatch as exc:
+        print(f"{exc}. Pass the same --understander the run used (none for builtin).", file=sys.stderr)
+        return 1
     path = save(manifest, args.out)
     print(format_table(summarise(manifest, scenarios)))
     print(f"saved {path}")
@@ -235,6 +260,9 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--language-policy", choices=["auto", "hint"], default="auto")
     p_run.add_argument("--offline", action="store_true", help="never try to download weights")
     p_run.add_argument("--out", default="results")
+    p_run.add_argument("--understander", default=None, metavar="package.module:function",
+                       help="replace the built-in matcher with this callable (docs/ADAPTERS.md); "
+                            "imports and runs a TRUSTED local Python module; never point it at untrusted code")
     p_run.add_argument("--command", default=None, help=argparse.SUPPRESS)
     p_run.add_argument("-v", "--verbose", action="store_true")
     p_run.set_defaults(func=_cmd_run)
@@ -242,6 +270,9 @@ def main(argv: list[str] | None = None) -> int:
     p_res = sub.add_parser("rescore", help="re-score a saved run's transcripts with the current code")
     p_res.add_argument("run")
     p_res.add_argument("--out", default="results")
+    p_res.add_argument("--understander", default=None, metavar="package.module:function",
+                       help="must be the understander the run recorded; "
+                            "imports and runs a TRUSTED local Python module; never point it at untrusted code")
     p_res.set_defaults(func=_cmd_rescore)
 
     p_cmp = sub.add_parser("compare", help="compare transcripts and outcomes of two runs")
