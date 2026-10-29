@@ -237,7 +237,7 @@ real-model smoke test.
   differ between two runs.
 - Full runs at commit `20939304`, saved in `results/`:
   - auto-detect: 18/50, corpus WER 1.63, p50 2886 ms, p95 11707 ms, 183 s wall.
-  - language hint: 15/50, corpus WER 0.97, p50 2749 ms, p95 10968 ms, 177 s wall.
+  - language hint: 15/50, corpus WER 0.97, p50 2748 ms, p95 10968 ms, 177 s wall.
 - 174 tests pass, 1 skipped.
 
 **What surprised me / did not work**
