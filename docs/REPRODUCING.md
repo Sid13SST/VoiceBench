@@ -41,6 +41,21 @@ What to expect:
 
 ## 3. Audio → results
 
+Preflight before a benchmark run, so the run measures the commit you mean
+to measure (a stale checkout once produced runs of an older `main`):
+
+```bash
+git fetch origin
+git rev-parse HEAD                  # must equal the commit you mean to measure
+```
+
+After the run, check that the run file's `git_commit` equals that same
+commit (with no `-dirty` suffix):
+
+```bash
+python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['git_commit'])" results/<run>.json
+```
+
 ```bash
 make bench                 # Whisper small, language auto-detect   (~3-7 min on 4 CPUs)
 make bench POLICY=hint     # scenario language passed to Whisper
