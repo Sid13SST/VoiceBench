@@ -17,7 +17,7 @@ an API key or costs money.
 ```bash
 sudo apt-get install espeak-ng      # only needed to (re)generate audio
 make setup-locked                   # exact versions (Python 3.11+); or `make setup` for any 3.10+
-make test                           # with espeak-ng installed: 271 pass, 1 skipped (real-model test); without it 266 pass, 6 skipped (5 need espeak-ng); no model download
+make test                           # with espeak-ng installed: 290 pass, 1 skipped (real-model test); without it 285 pass, 6 skipped (5 need espeak-ng); no model download
 ```
 
 ## 2. Scenarios → audio
@@ -101,3 +101,8 @@ machines, not a general guarantee. Check your own runs with:
 This re-scores the saved transcripts with the current code and writes a new
 run file with `rescored_from` set. It was used once: for the
 hyphenated-digit fix on day 4 (see `results/README.md`).
+
+A run made with `--understander` (see [`ADAPTERS.md`](ADAPTERS.md)) is
+only rescored with the same `--understander`; `rescore` refuses anything
+else. Runs without an `understander` field, including all committed ones,
+count as the built-in matcher.

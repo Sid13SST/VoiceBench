@@ -108,7 +108,7 @@ Requires Python 3.10+ and, to regenerate audio, `espeak-ng`
 ```bash
 make setup          # .venv with the package, dev and ASR extras
 make setup-locked   # same, with the exact versions used for the committed runs (Python 3.11+)
-make test           # with espeak-ng installed: 271 pass, 1 skipped (real-model test); without it 266 pass, 6 skipped (5 need espeak-ng); downloads no model
+make test           # with espeak-ng installed: 290 pass, 1 skipped (real-model test); without it 285 pass, 6 skipped (5 need espeak-ng); downloads no model
 make validate       # check scenarios/v1.jsonl and print its makeup
 make audio-check    # regenerate the audio in a temp dir and compare with audio/v1
 
@@ -132,6 +132,13 @@ Other commands (`.venv/bin/voicebench …`):
 | `run --asr oracle` | pipeline check with reference text as the transcript (not an ASR result) |
 | `transcribe WAV…` | transcribe individual clips |
 | `synth SCENARIOS --out DIR [--check]` | generate audio, or verify committed audio |
+
+To score your own intent and slot extraction instead of the built-in
+matcher, `run --understander package.module:function` imports a function
+with the contract `understand(transcript, domain) -> {"intent", "slots"}`.
+It runs trusted local Python code only. The contract, the Python-level
+transcriber hook and their limits (built-in domains and intents only, no
+HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 
 ## Limitations
 
