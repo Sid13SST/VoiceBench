@@ -87,9 +87,10 @@ The same three English scenarios fail in both runs (14/17 pass):
 | `v1-031` | noise, 5 dB babble | "from pune to mumbai" → "for people who don't want to": the city names are lost in babble, so `source` and `destination` are missing. Intent, mode and date survive. |
 | `v1-041` | barge-in | "Welcome to the bank for balance and trance 3,000 groupings to never transfer": the agent prompt and part of the caller are mixed together ("3,000", "transfer", and "neha" heard as "never"). "balance" (prompt) and "transfer" (caller) both score 3, and the matcher breaks ties by list order, so it picks `check_balance`. That's an ASR failure (overlap) made worse by a matcher tie rule. The caller starts 1.8 s into the prompt, and the two overlap for 2.6 s. |
 
-- **Lucky pass:** `v1-044` (barge-in) passes because the transcript is mostly
-  the agent prompt and contains "agents". The analysis flags it as
-  `agent_prompt_leak` even though it passes.
+- **Lucky pass:** `v1-044` (barge-in) passes although the transcript is mostly
+  the agent prompt. The only scoring keyword hit is "human", which comes from
+  the caller's words; the leaked prompt text contains neither "agent" nor
+  "human". The analysis flags it as `agent_prompt_leak` even though it passes.
 - **Self-correction works when ASR is right:** `v1-046` ("send 2000, no
   sorry, 4000…" → 4000) and `v1-048` ("two masala dosa wait make that
   three" → 3) both pass via the last-mention rule.

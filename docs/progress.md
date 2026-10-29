@@ -166,8 +166,10 @@ real-model smoke test.
   fix would be made after seeing v1 results. If I fix it, the current runs
   stay as they are, the fix gets its own commit, and new runs are added next
   to the old ones, so the change is visible.
-- Lucky pass: `v1-044` (barge-in) passes only because the leaked agent
-  prompt contains the word "agent".
+- Lucky pass: `v1-044` (barge-in) passes although the agent prompt leaked
+  into the transcript. The only scoring keyword hit is "human", from the
+  caller's words; the leaked prompt text contains neither "agent" nor
+  "human".
 - The first transcription in a run includes some warm-up cost. Day 5 latency
   reporting should do an untimed warm-up call first.
 - Run files from this commit don't contain the model revision. The adapter
