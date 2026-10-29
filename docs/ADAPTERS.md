@@ -75,8 +75,32 @@ built-in matcher, or the `package.module:function` given on the command
 line (from Python: the `understander` argument, else the callable's
 `module:qualname`). `voicebench report` prints it in the header when it
 is not `builtin`. Run files written before this field existed have no
-`understander` and are treated as `builtin`. The dashboard does not show
-the field yet.
+`understander` and are treated as `builtin`.
+
+### Compare and the dashboard
+
+`voicebench compare A B` prints the understander of both runs
+(`builtin` for a run file without the field). When they differ it says
+so explicitly, for example:
+
+```
+understander: A=builtin B=my_nlu:understand
+understanders differ: A=builtin B=my_nlu:understand - this compares two systems, not a reproducibility check
+```
+
+It does not refuse: comparing two systems on the same scenarios is
+legitimate, and the exit status is the same as for any other comparison.
+From Python, `compare.compare_runs()` returns the two values as
+`understander_a` and `understander_b`, and `understanders_differ` as a
+boolean, next to its other fields.
+
+The dashboard shows the understander for every run in the run list and in
+the run page header: plain `builtin` for the built-in matcher, an
+**external** tag followed by the recorded name otherwise; an external
+run's page also has a banner saying it was not scored by the built-in
+matcher. `/api/runs` includes an `understander` key for each run. The name
+is read from the run file, so it is treated as untrusted text and always
+HTML-escaped.
 
 ### Rescoring
 
