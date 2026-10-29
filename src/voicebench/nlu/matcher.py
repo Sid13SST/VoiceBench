@@ -23,13 +23,16 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from fractions import Fraction
 
 from voicebench.nlu import lexicon as lx
-from voicebench.nlu.numbers import NumberSpan, find_numbers
+from voicebench.nlu.numbers import HUNDRED, LAKH, THOUSAND, NumberSpan, find_numbers
 from voicebench.schema import INTENTS, Domain
 from voicebench.textnorm import normalise
 
 _DIGIT_GROUP_RE = re.compile(r"(?<=\d),(?=\d)")
+_DECIMAL_RE = re.compile(r"(?<![\d.])(\d+)\.(\d+)(?![.\d])(?:(\s+)(\S+))?")
+_SCALE = {**{w: 100 for w in HUNDRED}, **{w: 1000 for w in THOUSAND}, **{w: 100_000 for w in LAKH}}
 
 
 @dataclass(frozen=True)
@@ -179,9 +182,25 @@ def extract_slots(intent: str, domain: Domain, tokens: list[str], text: str) -> 
     return {k: v for k, v in slots.items() if v is not None}
 
 
+def _decimal(m: re.Match) -> str:
+    """Rewrite "1.5 lakh" as "150000" before normalisation turns "." into a space.
+
+    A decimal that is not a whole number after scaling ("2.5", "1.2345
+    thousand") is dropped: as "2 5" it would be read as a wrong number, and
+    no number is better than a wrong one.
+    """
+    whole, frac, space, word = m.groups()
+    value = int(whole) + Fraction(int(frac), 10 ** len(frac))
+    scale = _SCALE.get(normalise(word)) if word else None
+    if scale and (value * scale).denominator == 1:
+        return str(int(value * scale))
+    return f" {space}{word}" if word else " "
+
+
 def match(transcript: str, domain: Domain | str) -> Prediction:
     domain = Domain(domain)
-    text = normalise(_DIGIT_GROUP_RE.sub("", transcript))
+    text = _DIGIT_GROUP_RE.sub("", transcript)
+    text = normalise(_DECIMAL_RE.sub(_decimal, text))
     tokens = text.split()
     intent, scores = classify(tokens, domain, text)
     slots = extract_slots(intent, domain, tokens, text) if intent else {}
