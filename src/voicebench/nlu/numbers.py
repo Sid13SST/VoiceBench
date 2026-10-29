@@ -127,6 +127,11 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
                 break
             j += 1
         run = tokens[i:j]
+        # Romanised "do" right before a digit string is the English verb
+        # ("can you do 3 plates"), not "two" to add to it: start after it.
+        if run[0] == "do" and len(run) > 1 and _token_kind(run[1]) == "digits":
+            i += 1
+            continue
         if len(run) == 1 and run[0] in _AMBIGUOUS:
             i = j
             continue

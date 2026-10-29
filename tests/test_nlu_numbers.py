@@ -89,3 +89,28 @@ def test_only_ascii_and_devanagari_digits_are_digits(text, expected):
 )
 def test_short_digit_groups_join(text, expected):
     assert values(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        # English "do" before a digit string is the verb, not "two" added to the number
+        ("can you do 3 plates of masala dosa", [("3", False)]),
+        ("do 12 idli", [("12", False)]),
+        ("can you do 4821 please", [("4821", True)]),
+        # unchanged: romanised "do" as two, next to another number word or alone
+        ("do teen samosa", [("23", True)]),
+        ("ek do teen", [("123", True)]),
+        ("do samosa chahiye", []),  # "do" alone is ambiguous and was never read as a number
+        ("do hazaar bhejo", [("2000", False)]),
+        ("दो 3 समोसा", [("5", False)]),  # Devanagari दो is not the English verb: unchanged
+    ],
+)
+def test_english_do_before_digits(text, expected):
+    assert values(text) == expected
+
+
+def test_english_do_before_digits_gives_the_right_quantity():
+    from voicebench.nlu.matcher import match
+
+    assert match("can you do 3 plates of masala dosa", "food").slots == {"item": "masala dosa", "quantity": "3"}
