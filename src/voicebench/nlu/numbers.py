@@ -17,6 +17,7 @@ covered. That limit is real and shows up in results if a model writes, say,
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 UNITS: dict[str, int] = {
@@ -45,6 +46,10 @@ LAKH = {"lakh", "lac", "लाख"}
 MULTIPLIERS = HUNDRED | THOUSAND | LAKH
 
 _DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+# Only ASCII and Devanagari digits. str.isdigit() also accepts "²", "①" or
+# Arabic-Indic digits; int() rejects some of those, and none of them is a
+# digit a v1 caller says, so they are ignored like any other unknown token.
+_DIGITS_RE = re.compile(r"[0-9०-९]+")
 # Romanised words that are also common English/Hinglish words. They count as
 # numbers only inside a run that already contains another number token.
 _AMBIGUOUS = {"do", "das", "char", "teen", "ek", "oh", "nau", "saat"}
@@ -63,7 +68,7 @@ class NumberSpan:
 
 
 def _token_kind(tok: str) -> str | None:
-    if tok.translate(_DEV_DIGITS).isdigit():
+    if _DIGITS_RE.fullmatch(tok):
         return "digits"
     if tok in UNITS:
         return "unit"

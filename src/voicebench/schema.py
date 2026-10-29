@@ -18,6 +18,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from voicebench.textnorm import normalise
+
 SCENARIO_ID_RE = re.compile(r"^v(\d+)-\d{3}$")
 DEVANAGARI_RE = re.compile(r"[ऀ-ॿ]")
 LATIN_RE = re.compile(r"[A-Za-z]")
@@ -128,6 +130,9 @@ class Scenario(BaseModel):
         v = " ".join(v.split())
         if not v:
             raise ValueError("reference must not be blank")
+        if not normalise(v):
+            # WER needs at least one reference word.
+            raise ValueError("reference has no words after normalisation")
         return v
 
     @field_validator("expected_slots")

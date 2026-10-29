@@ -117,3 +117,15 @@ def test_lexicon_covers_every_v1_reference():
         if p.intent != s.expected_intent or any(p.slots.get(k) != v for k, v in s.expected_slots.items()):
             misses.append((s.id, p.intent, p.slots))
     assert misses == []
+
+
+def test_superscript_digit_does_not_crash_the_matcher():
+    p = match("send ² thousand to rahul", "banking")
+    assert p.intent == "transfer_money" and p.slots == {"recipient": "rahul"}
+    p = match("book a train to goa on ² may", "travel")
+    assert p.intent == "book_ticket" and "date" not in p.slots
+
+
+@pytest.mark.parametrize("text", ["track order ١٢٣٤", "track order ①②③④", "cancel order ١٢٣٤"])
+def test_other_unicode_digits_are_not_an_order_id(text):
+    assert "order_id" not in match(text, "food").slots

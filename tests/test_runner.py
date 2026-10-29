@@ -201,3 +201,53 @@ def test_oracle_run_has_no_warmup_or_cost(setup):
     m = run(scenarios, audio, ReferenceTranscriber(), str(sfile), "t", source=FIX)
     assert m.warmup_runs == 0 and m.cost_note is None
     assert all(r.cost_usd is None and r.latency_ms is None for r in m.results)
+
+
+def _score_failing_on(failing_id):
+    from voicebench import runner
+
+    real = runner.score
+
+    def score(s, *args, **kwargs):
+        if s.id == failing_id:
+            raise ValueError("boom")
+        return real(s, *args, **kwargs)
+
+    return score
+
+
+def test_scoring_error_is_recorded_and_other_scenarios_complete(setup, monkeypatch):
+    scenarios, sfile, audio = setup
+    monkeypatch.setattr("voicebench.runner.score", _score_failing_on("v1-002"))
+    asr = ScriptedTranscriber({
+        "v1-001": "send ² thousand to rahul",  # used to raise inside the matcher
+        "v1-002": "राहुल को पाँच हज़ार रुपये भेजो",
+        "v1-003": "please block my credit card",
+    })
+    m = run(scenarios, audio, asr, str(sfile), "pytest", source=FIX)
+    by_id = {r.scenario_id: r for r in m.results}
+    assert [r.scenario_id for r in m.results] == ["v1-001", "v1-002", "v1-003"]
+    assert by_id["v1-001"].error is None and by_id["v1-001"].predicted_intent == "transfer_money"
+    assert by_id["v1-002"].error == "ValueError: boom" and by_id["v1-002"].task_success is False
+    assert by_id["v1-003"].task_success is True
+
+
+def test_scenario_with_empty_normalised_reference_fails_alone(setup):
+    scenarios, sfile, audio = setup
+    # Validation now rejects such a reference; build one past it to check the runner.
+    bad = Scenario.model_construct(**{**scenarios[0].model_dump(), "reference": "?!"})
+    m = run([bad, scenarios[2]], audio, ReferenceTranscriber(), str(sfile), "pytest", source=FIX)
+    assert m.results[0].error == "ValueError: reference is empty after normalisation"
+    assert m.results[1].task_success is True
+
+
+def test_rescore_records_a_scoring_error_and_continues(setup, monkeypatch):
+    from voicebench.runner import rescore
+
+    scenarios, sfile, audio = setup
+    asr = ScriptedTranscriber({s.id: s.reference for s in scenarios})
+    first = run(scenarios, audio, asr, str(sfile), "t", source=FIX)
+    monkeypatch.setattr("voicebench.runner.score", _score_failing_on("v1-002"))
+    again = rescore(first, scenarios, "voicebench rescore x")
+    assert [r.error for r in again.results] == [None, "ValueError: boom", None]
+    assert again.results[0].task_success and again.results[2].task_success

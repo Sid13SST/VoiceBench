@@ -119,11 +119,8 @@ def run(
                 if not wav.exists():
                     raise FileNotFoundError(f"missing audio {wav}")
                 t = transcriber.transcribe_file(wav, language=language)
-        except ASRUnavailable:
-            raise  # the whole run is impossible; don't write 50 identical failures
-        except Exception as exc:  # one bad file should not sink the run
-            results.append(failed(s, source, f"{type(exc).__name__}: {exc}"))
-        else:
+            # Scored inside the try so a scoring error is recorded for this
+            # scenario only, like a transcription error.
             results.append(
                 score(
                     s, t.text, source,
@@ -133,6 +130,10 @@ def run(
                     cost_usd=cost_fn(t.audio_duration_s) if cost_fn else None,
                 )
             )
+        except ASRUnavailable:
+            raise  # the whole run is impossible; don't write 50 identical failures
+        except Exception as exc:  # one bad file should not sink the run
+            results.append(failed(s, source, f"{type(exc).__name__}: {exc}"))
         if progress:
             r = results[-1]
             progress(f"{s.id} {'PASS' if r.task_success else 'FAIL'} {r.transcript or r.error or ''}")
@@ -177,13 +178,16 @@ def rescore(previous: RunManifest, scenarios: list[Scenario], command: str) -> R
         if old.error is not None or old.transcript is None:
             results.append(old)
             continue
-        results.append(
-            score(
-                s, old.transcript, previous.source,
-                latency_ms=old.latency_ms, audio_duration_s=old.audio_duration_s,
-                detected_language=old.detected_language, cost_usd=old.cost_usd,
+        try:
+            results.append(
+                score(
+                    s, old.transcript, previous.source,
+                    latency_ms=old.latency_ms, audio_duration_s=old.audio_duration_s,
+                    detected_language=old.detected_language, cost_usd=old.cost_usd,
+                )
             )
-        )
+        except Exception as exc:  # one scenario must not sink the rescore
+            results.append(failed(s, previous.source, f"{type(exc).__name__}: {exc}"))
     commit = git_commit(Path(previous.scenarios_file).resolve().parent)
     return previous.model_copy(
         update={

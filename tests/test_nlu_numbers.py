@@ -49,3 +49,20 @@ def test_find_numbers(text, expected):
 def test_comma_grouped_digits_need_preprocessing():
     # "5,000" normalises to "5 000"; the matcher joins digit groups before this.
     assert values("5,000") == [("5", True), ("000", True)]
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        # str.isdigit() is true for these, but int() fails on the superscript
+        ("send ² thousand to rahul", []),
+        ("book a train to goa on ² may", []),
+        # other non-ASCII, non-Devanagari digits are ignored, not read as an id
+        ("track order ١٢٣٤", []),  # Arabic-Indic
+        ("track order ①②③④", []),  # circled
+        ("order ①②③④ 4821", [("4821", True)]),
+        ("पीएनआर ४५२१", [("4521", True)]),  # Devanagari digits still count
+    ],
+)
+def test_only_ascii_and_devanagari_digits_are_digits(text, expected):
+    assert values(text) == expected

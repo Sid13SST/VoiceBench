@@ -34,6 +34,7 @@ def test_reference_whitespace_is_normalised():
         ({"expected_slots": {"pnr": "123"}}, "not allowed"),
         ({"expected_slots": {"amount": " "}}, "empty value"),
         ({"reference": "   "}, "blank"),
+        ({"reference": "?!"}, "no words"),  # WER is undefined for an empty reference
         ({"language": "fr"}, "language"),
         ({"unknown_field": 1}, "extra"),
     ],

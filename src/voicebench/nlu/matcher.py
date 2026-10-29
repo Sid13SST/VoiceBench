@@ -30,8 +30,10 @@ from voicebench.nlu.numbers import HUNDRED, LAKH, THOUSAND, NumberSpan, find_num
 from voicebench.schema import INTENTS, Domain
 from voicebench.textnorm import normalise
 
-_DIGIT_GROUP_RE = re.compile(r"(?<=\d),(?=\d)")
-_DECIMAL_RE = re.compile(r"(?<![\d.])(\d+)\.(\d+)(?![.\d])(?:(\s+)(\S+))?")
+# Digits as numbers.py reads them: ASCII and Devanagari only (\d is any Unicode digit).
+_D = "0-9०-९"
+_DIGIT_GROUP_RE = re.compile(rf"(?<=[{_D}]),(?=[{_D}])")
+_DECIMAL_RE = re.compile(rf"(?<![{_D}.])([{_D}]+)\.([{_D}]+)(?![.{_D}])(?:(\s+)(\S+))?")
 _SCALE = {**{w: 100 for w in HUNDRED}, **{w: 1000 for w in THOUSAND}, **{w: 100_000 for w in LAKH}}
 
 
