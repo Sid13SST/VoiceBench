@@ -49,8 +49,7 @@ clone of `https://github.com/Sid13SST/VoiceBench`):
   05:32:19 to 06:27:50 UTC, i.e. after that clone. When they were pushed is
   not recorded locally.
 - The re-run files were created at 06:48:26 and 06:53:14 UTC and record
-  `0f996db`; the branch that first held this document is based on
-  `0f996db`.
+  `0f996db`; the rescored copies were scored with the `f430675` source.
 
 So the re-run used a checkout made before the fixes reached `main`, and no
 fetch was done before running. The container the re-run itself ran in is no
