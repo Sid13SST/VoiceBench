@@ -23,6 +23,7 @@ from voicebench.dashboard.data import (
     matrix,
     run_overview,
 )
+from voicebench.understanding import BUILTIN
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 SCENARIO_ID_RE = re.compile(r"^v\d+-\d{3}$")
@@ -103,7 +104,8 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         return [
             {"run_id": e.run_id, "created_at": e.manifest.created_at, "asr_model": e.manifest.asr_model,
              "language_policy": e.manifest.language_policy, "source": e.manifest.source.value,
-             "rescored_from": e.manifest.rescored_from, "file": e.path.name}
+             "rescored_from": e.manifest.rescored_from, "file": e.path.name,
+             "understander": e.manifest.understander or BUILTIN}
             for e in store.runs()
         ]
 

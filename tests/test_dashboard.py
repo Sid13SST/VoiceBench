@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from conftest import make_scenario
-from voicebench.dashboard.app import create_app
+from voicebench.dashboard.app import TEMPLATES, create_app
 from voicebench.dashboard.data import case_rows, matrix, word_diff
 from voicebench.loader import file_sha256
 from voicebench.schema import RunManifest, Scenario
@@ -172,3 +172,65 @@ def test_run_pages_for_unscorable_runs_are_4xx(fixture_repo, tmp_path):
         api = client.get(f"/api/runs/{run_id}")
         assert api.status_code == 422 and reason in api.json()["detail"]
     assert client.get("/runs/fixture-run").status_code == 200
+
+
+EXTERNAL = "my_nlu:understand"
+HOSTILE = "<script>alert(1)</script>"
+
+
+def _write_run(tmp_path, m, drop_understander=False):
+    data = json.loads(m.model_dump_json())
+    if drop_understander:
+        del data["understander"]  # a run file from before the field existed
+    (tmp_path / "results" / f"{m.run_id}.json").write_text(json.dumps(data), encoding="utf-8")
+
+
+def _understander_cell(html, run_id):
+    """The understander cell of one row of the run list."""
+    row = html.split(f'href="/runs/{run_id}"', 1)[1].split("</tr>", 1)[0]
+    return row.split("</td>")[4]
+
+
+def test_api_runs_includes_the_understander(fixture_repo, tmp_path):
+    client, m, _, _ = fixture_repo
+    _write_run(tmp_path, m, drop_understander=True)
+    _write_run(tmp_path, m.model_copy(update={"run_id": "external-run", "understander": EXTERNAL}))
+    runs = {r["run_id"]: r for r in client.get("/api/runs").json()}
+    assert runs["fixture-run"]["understander"] == "builtin"
+    assert runs["external-run"]["understander"] == EXTERNAL
+    for r in runs.values():  # existing keys kept
+        assert {"run_id", "created_at", "asr_model", "language_policy", "source", "rescored_from", "file"} <= r.keys()
+
+
+def test_run_list_labels_builtin_and_external_understanders(fixture_repo, tmp_path):
+    client, m, _, _ = fixture_repo
+    _write_run(tmp_path, m, drop_understander=True)
+    _write_run(tmp_path, m.model_copy(update={"run_id": "external-run", "understander": EXTERNAL}))
+    html = client.get("/").text
+    assert "<th>understander</th>" in html
+    builtin = _understander_cell(html, "fixture-run")
+    assert "builtin" in builtin and 'class="tag"' not in builtin
+    external = _understander_cell(html, "external-run")
+    assert 'class="tag"' in external and ">external<" in external and EXTERNAL in external
+
+
+def test_run_page_header_shows_the_understander(fixture_repo, tmp_path):
+    client, m, _, _ = fixture_repo
+    builtin = client.get("/runs/fixture-run").text
+    assert "understander builtin" in builtin and "External understander." not in builtin
+    _write_run(tmp_path, m.model_copy(update={"run_id": "external-run", "understander": EXTERNAL}))
+    external = client.get("/runs/external-run").text
+    assert 'understander <span class="tag"' in external and EXTERNAL in external
+    assert "External understander." in external
+
+
+def test_hostile_understander_name_is_escaped(fixture_repo, tmp_path):
+    for name in ("index.html", "run.html", "macros.html"):
+        assert TEMPLATES.env.autoescape(name) is True
+    client, m, _, _ = fixture_repo
+    _write_run(tmp_path, m.model_copy(update={"run_id": "hostile-run", "understander": HOSTILE}))
+    escaped = "&lt;script&gt;alert(1)&lt;/script&gt;"
+    for page in (client.get("/").text, client.get("/runs/hostile-run").text):
+        assert HOSTILE not in page and "<script" not in page
+        assert escaped in page
+    assert {r["run_id"]: r for r in client.get("/api/runs").json()}["hostile-run"]["understander"] == HOSTILE

@@ -1,0 +1,5 @@
+{# What turned transcripts into intent and slots. A run file without the field used the built-in matcher.
+   The name comes from the run file and is untrusted: it is only ever output autoescaped. #}
+{% macro understander(name) -%}
+{% if not name or name == "builtin" %}builtin{% else %}<span class="tag" title="not the built-in matcher">external</span> <code class="name">{{ name }}</code>{% endif %}
+{%- endmacro %}

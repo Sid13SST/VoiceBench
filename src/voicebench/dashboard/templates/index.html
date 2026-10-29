@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros.html" as ui %}
 {% block body %}
 <h1>Runs</h1>
 <p class="muted">Every run file in <code>{{ results_dir }}</code>. Task success = right intent and every expected slot right.</p>
@@ -9,7 +10,7 @@
 <p>No runs yet. Create one with <code>make bench</code>.</p>
 {% else %}
 <div class="table-wrap"><table>
-<thead><tr><th>run</th><th>ASR</th><th>language</th><th>kind</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
+<thead><tr><th>run</th><th>ASR</th><th>language</th><th>kind</th><th>understander</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
 <tbody>
 {% for row in rows %}{% set m = row.entry.manifest %}
 <tr>
@@ -21,6 +22,7 @@
     {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}
     {% if not row.hash_ok %}<br><b>scenario file changed since run</b>{% endif %}
   </td>
+  <td class="small">{{ ui.understander(m.understander) }}</td>
   <td class="num">{{ row.overall.task_success }}/{{ row.overall.n }}</td>
   <td class="num">{{ "%.2f"|format(row.overall.corpus_wer) if row.overall.corpus_wer is not none else "-" }}</td>
 </tr>

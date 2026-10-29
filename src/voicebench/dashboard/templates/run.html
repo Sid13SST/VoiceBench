@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros.html" as ui %}
 {% block title %}{{ m.run_id }} · VoiceBench{% endblock %}
 {% macro meter(c) -%}
 {% if c.n %}<div class="meter" title="{{ c.ok }} of {{ c.n }} passed ({{ '%.0f'|format(100 * c.rate) }}%)">
@@ -11,12 +12,14 @@
 <h1>{{ m.run_id }}</h1>
 <p class="muted small">
   ASR <b>{{ m.asr_model }}</b>{% if m.asr_model_version %} ({{ m.asr_config.backend }} {{ m.asr_model_version }}){% endif %}
+  · understander {{ ui.understander(m.understander) }}
   · language {{ m.language_policy or "-" }} · audio {{ m.tts_engine or "-" }}
   · commit <code>{{ (m.git_commit or "unknown")[:12] }}</code><br>
   command <code>{{ m.command }}</code>
 </p>
 {% if m.source.value == "fixture" %}<div class="banner"><b>Fixture data.</b> These results are hand-written for testing and are not a measurement.</div>{% endif %}
 {% if m.asr_model == "oracle-reference" %}<div class="banner"><b>Not an ASR result.</b> The reference text was used as the transcript, to check the pipeline.</div>{% endif %}
+{% if m.understander and m.understander != "builtin" %}<div class="banner"><b>External understander.</b> Intent and slots came from <code class="name">{{ m.understander }}</code>, not the built-in matcher. Compare it with builtin runs as a different system.</div>{% endif %}
 {% if m.rescored_from %}<div class="banner">Re-scored from <a href="/runs/{{ m.rescored_from }}">{{ m.rescored_from }}</a>: same transcripts, scored again with the code at this commit.</div>{% endif %}
 {% if not hash_ok %}<div class="banner"><b>The scenario file has changed since this run.</b> References shown may not be the ones it was scored against.</div>{% endif %}
 {% if m.tts_engine and m.tts_engine.startswith("espeak") %}<p class="small muted">Audio is synthetic espeak-ng speech, not real callers. Results describe this audio only.</p>{% endif %}
