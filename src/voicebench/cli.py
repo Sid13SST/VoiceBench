@@ -149,12 +149,35 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _scenarios_of_run(run, run_path: str, action: str):
+    """Load the scenarios a saved run was scored against, or print why not and return None.
+
+    A relative ``scenarios_file`` is looked up from the current directory, as
+    ``rescore`` does, then from the run file's repository root (the parent of
+    its results directory), as the dashboard does. A file whose sha256 does
+    not match the run is refused, as ``rescore`` refuses it.
+    """
+    path = Path(run.scenarios_file)
+    if not path.is_absolute() and not path.exists():
+        path = Path(run_path).resolve().parent.parent / path
+    if not path.exists():
+        print(f"scenarios file not found: {run.scenarios_file}", file=sys.stderr)
+        return None
+    if file_sha256(path) != run.scenarios_sha256:
+        print(f"scenario file changed since this run ({path}); refusing to {action}", file=sys.stderr)
+        return None
+    return load_scenarios(path)
+
+
 def _cmd_analyze(args: argparse.Namespace) -> int:
     from voicebench.analysis import analyse_run, format_analysis
     from voicebench.runner import load_run
 
     run = load_run(args.run)
-    print(format_analysis(analyse_run(run, load_scenarios(run.scenarios_file))))
+    scenarios = _scenarios_of_run(run, args.run, "analyze")
+    if scenarios is None:
+        return 1
+    print(format_analysis(analyse_run(run, scenarios)))
     return 0
 
 
@@ -163,7 +186,10 @@ def _cmd_report(args: argparse.Namespace) -> int:
     from voicebench.runner import load_run
 
     run = load_run(args.run)
-    print(format_table(summarise(run, load_scenarios(run.scenarios_file))))
+    scenarios = _scenarios_of_run(run, args.run, "report")
+    if scenarios is None:
+        return 1
+    print(format_table(summarise(run, scenarios)))
     return 0
 
 
