@@ -26,6 +26,10 @@ class RunEntry:
     manifest: RunManifest
 
 
+class RunUnusable(Exception):
+    """A valid run file that cannot be scored: its scenarios file is missing or does not match it."""
+
+
 class RunStore:
     """Loads every ``*.json`` run in ``results_dir``; reloads files that changed."""
 
@@ -134,5 +138,12 @@ def case_rows(
 
 
 def run_overview(entry: RunEntry, store: RunStore) -> dict[str, Any]:
-    scenarios, hash_ok = store.scenarios_for(entry.manifest)
-    return {"summary": summarise(entry.manifest, scenarios), "hash_ok": hash_ok, "scenarios": scenarios}
+    """Summary of a run. Raises RunUnusable if its scenarios cannot be loaded or do not cover its results."""
+    try:
+        scenarios, hash_ok = store.scenarios_for(entry.manifest)
+        summary = summarise(entry.manifest, scenarios)
+    except FileNotFoundError:
+        raise RunUnusable(f"scenarios file not found: {entry.manifest.scenarios_file}") from None
+    except ValueError as e:  # includes pydantic ValidationError from a malformed scenarios file
+        raise RunUnusable(str(e)) from None
+    return {"summary": summary, "hash_ok": hash_ok, "scenarios": scenarios}

@@ -141,3 +141,34 @@ def test_committed_runs_render():
     assert runs
     for run in runs:
         assert client.get(f"/runs/{run['run_id']}?status=all").status_code == 200
+
+
+def _write_broken_runs(tmp_path, m):
+    missing = m.model_copy(update={"run_id": "missing-scenarios", "scenarios_file": "scenarios/gone.jsonl"})
+    unknown = m.model_copy(update={"run_id": "unknown-scenario",
+                                   "results": [m.results[0].model_copy(update={"scenario_id": "v1-999"}),
+                                               *m.results[1:]]})
+    for run in (missing, unknown):
+        (tmp_path / "results" / f"{run.run_id}.json").write_text(run.model_dump_json(), encoding="utf-8")
+
+
+def test_index_survives_runs_that_cannot_be_scored(fixture_repo, tmp_path):
+    client, m, _, _ = fixture_repo
+    _write_broken_runs(tmp_path, m)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert 'href="/runs/fixture-run"' in r.text and "1/3" in r.text
+    assert 'href="/runs/missing-scenarios"' not in r.text
+    assert "missing-scenarios.json" in r.text and "scenarios file not found: scenarios/gone.jsonl" in r.text
+    assert "unknown-scenario.json" in r.text and "v1-999" in r.text
+
+
+def test_run_pages_for_unscorable_runs_are_4xx(fixture_repo, tmp_path):
+    client, m, _, _ = fixture_repo
+    _write_broken_runs(tmp_path, m)
+    for run_id, reason in (("missing-scenarios", "scenarios file not found"), ("unknown-scenario", "v1-999")):
+        r = client.get(f"/runs/{run_id}")
+        assert r.status_code == 422 and reason in r.text
+        api = client.get(f"/api/runs/{run_id}")
+        assert api.status_code == 422 and reason in api.json()["detail"]
+    assert client.get("/runs/fixture-run").status_code == 200

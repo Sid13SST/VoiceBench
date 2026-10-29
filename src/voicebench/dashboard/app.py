@@ -18,6 +18,7 @@ from voicebench.dashboard.data import (
     CONDITIONS,
     LANGUAGES,
     RunStore,
+    RunUnusable,
     case_rows,
     matrix,
     run_overview,
@@ -39,14 +40,26 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
             raise HTTPException(404, f"no run {run_id!r}")
         return entry
 
+    def _overview(entry):
+        try:
+            return run_overview(entry, store)
+        except RunUnusable as e:
+            raise HTTPException(422, f"run {entry.run_id!r} ({entry.path.name}) cannot be shown: {e}") from None
+
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
-        rows = []
+        rows, unusable = [], []
         for e in store.runs():
-            ov = run_overview(e, store)
+            try:
+                ov = run_overview(e, store)
+            except RunUnusable as err:
+                unusable.append({"file": e.path.name, "reason": str(err)})
+                continue
             rows.append({"entry": e, "overall": ov["summary"]["overall"], "hash_ok": ov["hash_ok"]})
         return TEMPLATES.TemplateResponse(
-            request, "index.html", {"rows": rows, "invalid": store.invalid, "results_dir": str(store.results_dir)}
+            request,
+            "index.html",
+            {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": str(store.results_dir)},
         )
 
     @app.get("/runs/{run_id}", response_class=HTMLResponse)
@@ -61,7 +74,13 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         language = language if language in LANGUAGES else None
         condition = condition if condition in CONDITIONS else None
         status = status if status in ("fail", "pass", "all") else "fail"
-        ov = run_overview(entry, store)
+        try:
+            ov = run_overview(entry, store)
+        except RunUnusable as e:
+            return TEMPLATES.TemplateResponse(
+                request, "unusable.html", {"m": entry.manifest, "file": entry.path.name, "reason": str(e)},
+                status_code=422,
+            )
         m = entry.manifest
         return TEMPLATES.TemplateResponse(
             request,
@@ -91,7 +110,7 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
     @app.get("/api/runs/{run_id}")
     def api_run(run_id: str):
         entry = _entry(run_id)
-        ov = run_overview(entry, store)
+        ov = _overview(entry)
         return {"summary": ov["summary"], "scenario_hash_matches": ov["hash_ok"], "run": entry.manifest}
 
     @app.get("/audio/{scenario_id}.wav")
