@@ -13,7 +13,8 @@ Rules, all of them deliberately simple:
   means no intent.
 - most slots: the *last* mention wins, which handles self-corrections
   ("two thousand no sorry four thousand" -> 4000). A number introduced by
-  an account, card, order, PNR or number word is not an amount.
+  an account, card, order, PNR or number word (or by one followed by
+  "ending" or "ending in") is not an amount.
 - device and issue: the first mention wins (the device named first is the
   subject: "my phone's app is not loading" -> phone).
 - source city: the city after "from" or before "से"; destination: the last
@@ -157,6 +158,10 @@ def _is_id_number(n: NumberSpan, tokens: list[str], numbers: list[NumberSpan]) -
     """n is introduced by an account/card/order/PNR/number word, so it is not an amount."""
     if n.start > 0 and tokens[n.start - 1] in lx.ID_NUMBER_MARKERS:
         return True
+    for words in lx.ID_NUMBER_ENDING:
+        k = n.start - len(words)
+        if k > 0 and tuple(tokens[k:n.start]) == words and tokens[k - 1] in lx.ID_NUMBER_MARKERS:
+            return True
     if not (n.digit_sequence and len(n.value) >= _ID_MIN_DIGITS):
         return False
     in_number = {k for m in numbers for k in range(m.start, m.end)}

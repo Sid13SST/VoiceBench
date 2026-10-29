@@ -161,6 +161,10 @@ def test_digit_groups_join_into_one_id(text, domain, slots):
         ("send 2000 to rahul, order 7310", "2000"),
         ("send 2000 to rahul, pnr 4521378690", "2000"),
         ("राहुल को 5000 भेजो खाता नंबर 1234", "5000"),
+        # a marker followed by "ending" / "ending in" introduces an id too
+        ("transfer 500 to rahul card ending 4321", "500"),
+        ("transfer 500 to rahul card ending in 4321", "500"),
+        ("send five thousand to rahul account ending in 7 3 1 0", "5000"),
         # unchanged
         ("send 5000 to rahul", "5000"),
         ("send 1.5 lakh to rahul", "150000"),
@@ -169,6 +173,8 @@ def test_digit_groups_join_into_one_id(text, domain, slots):
         ("I'm at your 1500 rupees transfer card war", "1500"),  # v1-022 transcript: marker after the amount
         # a short number a few words after a marker is still an amount
         ("from my account send 5000 to rahul", "5000"),
+        ("from my account send 5000", "5000"),
+        ("from my card ending in 4321 send 5000", "5000"),
     ],
 )
 def test_account_card_order_numbers_are_not_amounts(text, amount):

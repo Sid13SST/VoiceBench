@@ -107,6 +107,8 @@ ID_NUMBER_MARKERS = {
     "account", "acct", "खाता", "खाते", "अकाउंट", "एकाउंट", "khata", "khaata", "khate",
     "card", "कार्ड", "order", "ऑर्डर", "आर्डर", "pnr", "पीएनआर", "number", "नंबर", "नम्बर",
 }
+# Words between such a marker and the id: "card ending 4321", "card ending in 4321".
+ID_NUMBER_ENDING = (("ending",), ("ending", "in"))
 WEEKDAYS = {
     "monday": ["monday", "सोमवार", "somvar"],
     "tuesday": ["tuesday", "मंगलवार", "mangalvar"],
