@@ -168,6 +168,10 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     print(f"{c['a']}\n  vs {c['b']}")
     print(f"scenarios compared: {c['compared']}; same hardware: {c['same_hardware']}; "
           f"same model revision: {c['same_model']}")
+    print(f"understander: A={c['understander_a']} B={c['understander_b']}")
+    if c["understanders_differ"]:
+        print(f"understanders differ: A={c['understander_a']} B={c['understander_b']} - "
+              "this compares two systems, not a reproducibility check")
     print(f"transcripts differ: {len(c['transcripts_differ'])} {' '.join(c['transcripts_differ'])}")
     print(f"task outcome differs: {len(c['task_outcome_differs'])} "
           + " ".join(f"{i}({x}->{y})" for i, x, y in c["task_outcome_differs"]))

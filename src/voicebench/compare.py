@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from voicebench.schema import RunManifest
+from voicebench.understanding import BUILTIN
 
 
 def compare_runs(a: RunManifest, b: RunManifest) -> dict[str, Any]:
@@ -29,4 +30,8 @@ def compare_runs(a: RunManifest, b: RunManifest) -> dict[str, Any]:
         and a.asr_config.get("model_revision") is not None,
         "transcripts_differ": transcript_diffs,
         "task_outcome_differs": outcome_diffs,
+        # A run file without the field was scored by the built-in matcher.
+        "understander_a": a.understander or BUILTIN,
+        "understander_b": b.understander or BUILTIN,
+        "understanders_differ": (a.understander or BUILTIN) != (b.understander or BUILTIN),
     }
