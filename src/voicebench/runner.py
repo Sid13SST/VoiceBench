@@ -202,11 +202,25 @@ def rescore(previous: RunManifest, scenarios: list[Scenario], command: str) -> R
 
 
 def save(manifest: RunManifest, out_dir: str | Path) -> Path:
+    """Write ``<run_id>.json``; never overwrites an existing run file.
+
+    Run ids have one-second resolution, so a second run started in the same
+    second (or a second rescore at the same commit) gets "-2", "-3", ...
+    appended to its run_id and file name. The dashboard addresses runs by
+    run_id, so the id and the file name stay the same.
+    """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{manifest.run_id}.json"
-    path.write_text(manifest.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    return path
+    run_id, n = manifest.run_id, 1
+    while True:
+        path = out_dir / f"{run_id}.json"
+        try:
+            with path.open("x", encoding="utf-8") as f:
+                f.write(manifest.model_copy(update={"run_id": run_id}).model_dump_json(indent=2) + "\n")
+            return path
+        except FileExistsError:
+            n += 1
+            run_id = f"{manifest.run_id}-{n}"
 
 
 def load_run(path: str | Path) -> RunManifest:

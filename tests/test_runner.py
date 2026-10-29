@@ -121,6 +121,22 @@ def test_save_load_and_summarise(setup, tmp_path):
     assert "fixture" in format_table(s)
 
 
+def test_save_never_overwrites_a_run_with_the_same_id(setup, tmp_path):
+    scenarios, sfile, audio = setup
+    first = run(scenarios, audio, ScriptedTranscriber({"v1-001": "please send five thousand rupees to rahul"}),
+                str(sfile), "t", source=FIX)
+    second = run(scenarios, audio, ScriptedTranscriber({"v1-001": "block my debit card"}),
+                 str(sfile), "t", source=FIX).model_copy(update={"run_id": first.run_id})
+    out = tmp_path / "results"
+    p1, p2, p3 = save(first, out), save(second, out), save(second, out)
+    assert len({p1, p2, p3}) == 3 and sorted(out.glob("*.json")) == sorted([p1, p2, p3])
+    assert load_run(p1) == first
+    assert p1.name == f"{first.run_id}.json"
+    assert load_run(p2).run_id == f"{first.run_id}-2" and p2.name == f"{first.run_id}-2.json"
+    assert load_run(p3).run_id == f"{first.run_id}-3"
+    assert load_run(p2).results == second.results != first.results
+
+
 def test_oracle_run_on_v1_end_to_end(tmp_path, capsys):
     """Pipeline check on the real scenario file with reference text as input."""
     code = main(["run", "--asr", "oracle", "--scenarios", str(ROOT / "scenarios" / "v1.jsonl"),
