@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ m.run_id }} · VoiceBench{% endblock %}
+{% block body %}
+<h1>{{ m.run_id }}</h1>
+<div class="banner">This run file ({{ file }}) is valid but cannot be shown: {{ reason }}</div>
+<p><a href="/">All runs</a></p>
+{% endblock %}

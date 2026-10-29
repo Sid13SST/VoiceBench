@@ -3,6 +3,8 @@
 <h1>Runs</h1>
 <p class="muted">Every run file in <code>{{ results_dir }}</code>. Task success = right intent and every expected slot right.</p>
 {% if invalid %}<div class="banner">Skipped files that are not valid run files: {{ invalid | join(", ") }}</div>{% endif %}
+{% if unusable %}<div class="banner">Skipped run files whose scenarios cannot be loaded:
+{% for u in unusable %}<br>{{ u.file }}: {{ u.reason }}{% endfor %}</div>{% endif %}
 {% if not rows %}
 <p>No runs yet. Create one with <code>make bench</code>.</p>
 {% else %}
