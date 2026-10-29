@@ -4,7 +4,7 @@ Two readings are produced for each maximal run of number tokens:
 
 - a run of two or more single-digit words ("four eight two one",
   "दो दो नौ") is read digit by digit -> "4821" (order ids, PNRs), and so
-  is a run of digit strings ("4821", "7 3 1 0") - except a lone numeral
+  is a run of digit strings ("4821", "7 3 1 0", "45 21 37") - except a lone numeral
   of one or two digits ("2", "12") with no digit string next to it,
   which is a quantity;
 - anything else is read as a quantity -> "fifteen hundred" = 1500,
@@ -115,13 +115,14 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
         j = i
         while j < len(tokens) and _token_kind(tokens[j]) is not None:
             # a digit string ends a run ("4821 5590" are two ids), except that
-            # single digits join up: Whisper writes "7310" read digit by digit
-            # as "7-3-1-0" or "7, 3, 1, 0", which normalise to "7 3 1 0".
+            # groups of one or two digits join up: Whisper writes "7310" read
+            # digit by digit as "7-3-1-0" or "7, 3, 1, 0", which normalise to
+            # "7 3 1 0", and a PNR read in pairs as "45 21 37 86 90".
             if (
                 j > i
                 and _token_kind(tokens[j]) == "digits"
                 and _token_kind(tokens[j - 1]) == "digits"
-                and not (len(tokens[j]) == 1 and len(tokens[j - 1]) == 1)
+                and not (len(tokens[j]) <= 2 and len(tokens[j - 1]) <= 2)
             ):
                 break
             j += 1

@@ -66,3 +66,26 @@ def test_comma_grouped_digits_need_preprocessing():
 )
 def test_only_ascii_and_devanagari_digits_are_digits(text, expected):
     assert values(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        # groups of one or two digits join into one id (Whisper writes a PNR read in pairs this way)
+        ("pnr 45 21 37 86 90", [("4521378690", True)]),
+        ("order 31 27", [("3127", True)]),
+        # unchanged: a group of three or more digits is not joined to a neighbour by a space
+        ("track order 4821 5590", [("4821", True), ("5590", True)]),
+        ("track order 12 4821", [("12", True), ("4821", True)]),
+        ("cancel order 7 3 1 0", [("7310", True)]),
+        ("i want 2 masala dosa", [("2", False)]),
+        # Judgement call, left as it was: "3 127" could be one id 3127 or a stray 3
+        # and id 127. Spaces only join groups of one or two digits ("7 3 1 0",
+        # "45 21 37"), and "4821 5590" / "12 4821" stay apart, so a 3-digit group
+        # stays apart here too. With a hyphen ("3-127") it is one id, like "31-27"
+        # (see test_nlu_matcher.py).
+        ("cancel order 3 127", [("3", True), ("127", True)]),
+    ],
+)
+def test_short_digit_groups_join(text, expected):
+    assert values(text) == expected

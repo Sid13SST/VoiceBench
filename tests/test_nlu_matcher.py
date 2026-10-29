@@ -129,3 +129,23 @@ def test_superscript_digit_does_not_crash_the_matcher():
 @pytest.mark.parametrize("text", ["track order ١٢٣٤", "track order ①②③④", "cancel order ١٢٣٤"])
 def test_other_unicode_digits_are_not_an_order_id(text):
     assert "order_id" not in match(text, "food").slots
+
+
+@pytest.mark.parametrize(
+    "text, domain, slots",
+    [
+        ("PNR 452-137-8690", "travel", {"pnr": "4521378690"}),  # 452137 8690 grouped
+        ("PNR 45 21 37 86 90", "travel", {"pnr": "4521378690"}),
+        ("cancel order 31-27", "food", {"order_id": "3127"}),
+        ("cancel order 3-127", "food", {"order_id": "3127"}),
+        # unchanged
+        ("track order 4821 5590", "food", {"order_id": "5590"}),  # two ids, the last wins
+        ("track order 12 4821", "food", {"order_id": "4821"}),
+        ("cancel order 7 3 1 0", "food", {"order_id": "7310"}),
+        ("cancel order 7-3-1-0", "food", {"order_id": "7310"}),
+        ("cancel order 3 127", "food", {"order_id": "127"}),  # see test_nlu_numbers.py
+        ("I want 2 masala dosa", "food", {"item": "masala dosa", "quantity": "2"}),
+    ],
+)
+def test_digit_groups_join_into_one_id(text, domain, slots):
+    assert match(text, domain).slots == slots

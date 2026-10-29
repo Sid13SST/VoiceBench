@@ -33,6 +33,10 @@ from voicebench.textnorm import normalise
 # Digits as numbers.py reads them: ASCII and Devanagari only (\d is any Unicode digit).
 _D = "0-9०-९"
 _DIGIT_GROUP_RE = re.compile(rf"(?<=[{_D}]),(?=[{_D}])")
+# "452-137-8690", "31-27": hyphenated digit groups are one number. A chain of
+# single digits ("7-3-1-0") is left to numbers.py, which joins those anyway.
+# Not next to a decimal point, so "1.5-25 lakh" is not misread.
+_HYPHEN_GROUPS_RE = re.compile(rf"(?<![{_D}])(?<![{_D}]\.)[{_D}]+(?:-[{_D}]+)+(?!\.[{_D}])")
 _DECIMAL_RE = re.compile(rf"(?<![{_D}.])([{_D}]+)\.([{_D}]+)(?![.{_D}])(?:(\s+)(\S+))?")
 _SCALE = {**{w: 100 for w in HUNDRED}, **{w: 1000 for w in THOUSAND}, **{w: 100_000 for w in LAKH}}
 
@@ -199,9 +203,15 @@ def _decimal(m: re.Match) -> str:
     return f" {space}{word}" if word else " "
 
 
+def _hyphen_groups(m: re.Match) -> str:
+    groups = m.group().split("-")
+    return m.group() if all(len(g) == 1 for g in groups) else "".join(groups)
+
+
 def match(transcript: str, domain: Domain | str) -> Prediction:
     domain = Domain(domain)
     text = _DIGIT_GROUP_RE.sub("", transcript)
+    text = _HYPHEN_GROUPS_RE.sub(_hyphen_groups, text)
     text = normalise(_DECIMAL_RE.sub(_decimal, text))
     tokens = text.split()
     intent, scores = classify(tokens, domain, text)
