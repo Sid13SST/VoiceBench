@@ -270,6 +270,11 @@ class RunManifest(BaseModel):
     cost_note: Optional[str] = None
     # Set when transcripts were taken from an earlier run and only re-scored.
     rescored_from: Optional[str] = None
+    # What turned transcripts into intent and slots: "builtin" for the
+    # rule-based matcher, else the "module:function" of an external
+    # understander. Run files from before this field existed used the
+    # built-in matcher, so None also means "builtin".
+    understander: Optional[str] = None
     notes: Optional[str] = None
     results: list[ScenarioResult]
 

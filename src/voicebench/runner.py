@@ -15,6 +15,7 @@ from voicebench.asr import WHISPER_LANGUAGE_HINT, ASRUnavailable, Transcript
 from voicebench.loader import file_sha256
 from voicebench.schema import ResultSource, RunManifest, Scenario
 from voicebench.scoring import failed, score
+from voicebench.understanding import BUILTIN, Understander, understander_id
 
 LANGUAGE_POLICIES = ("auto", "hint")
 
@@ -85,7 +86,14 @@ def run(
     source: ResultSource = ResultSource.MEASURED,
     language_policy: str = "auto",
     progress: Optional[Callable[[str], None]] = None,
+    understand: Optional[Understander] = None,
+    understander: Optional[str] = None,
 ) -> RunManifest:
+    """Transcribe and score every scenario.
+
+    ``understand`` replaces the built-in matcher; ``understander`` is the name
+    recorded for it in the run file (default: its ``module:qualname``).
+    """
     if language_policy not in LANGUAGE_POLICIES:
         raise ValueError(f"language_policy must be one of {LANGUAGE_POLICIES}")
     audio_dir = Path(audio_dir)
@@ -128,6 +136,7 @@ def run(
                     audio_duration_s=t.audio_duration_s or None,
                     detected_language=t.detected_language or t.requested_language,
                     cost_usd=cost_fn(t.audio_duration_s) if cost_fn else None,
+                    understand=understand,
                 )
             )
         except ASRUnavailable:
@@ -160,17 +169,40 @@ def run(
         warmup_runs=warmup_runs,
         wall_time_s=wall_time_s,
         cost_note=getattr(transcriber, "cost_note", None),
+        understander=understander or understander_id(understand),
         results=results,
     )
 
 
-def rescore(previous: RunManifest, scenarios: list[Scenario], command: str) -> RunManifest:
+class UnderstanderMismatch(ValueError):
+    """A rescore would use a different understander than the run recorded."""
+
+
+def rescore(
+    previous: RunManifest,
+    scenarios: list[Scenario],
+    command: str,
+    understand: Optional[Understander] = None,
+    understander: Optional[str] = None,
+) -> RunManifest:
     """Score the transcripts of ``previous`` again with the current code.
 
     No audio is decoded: transcripts, latency and detected language are
     copied unchanged, so any difference comes from scoring/matching changes
     alone. Scenarios that errored before stay errored.
+
+    The understander must be the one the run recorded (a run file without
+    the field counts as "builtin"), so a run scored by an external
+    understander is never silently re-scored by the built-in matcher, or
+    the other way round. Otherwise UnderstanderMismatch is raised.
     """
+    recorded = previous.understander or BUILTIN
+    requested = understander or understander_id(understand)
+    if requested != recorded:
+        raise UnderstanderMismatch(
+            f"run {previous.run_id} was scored with understander {recorded!r}; "
+            f"refusing to rescore it with {requested!r}"
+        )
     by_id = {s.id: s for s in scenarios}
     results = []
     for old in previous.results:
@@ -184,6 +216,7 @@ def rescore(previous: RunManifest, scenarios: list[Scenario], command: str) -> R
                     s, old.transcript, previous.source,
                     latency_ms=old.latency_ms, audio_duration_s=old.audio_duration_s,
                     detected_language=old.detected_language, cost_usd=old.cost_usd,
+                    understand=understand,
                 )
             )
         except Exception as exc:  # one scenario must not sink the rescore
@@ -196,6 +229,7 @@ def rescore(previous: RunManifest, scenarios: list[Scenario], command: str) -> R
             "command": command,
             "git_commit": commit,
             "rescored_from": previous.run_id,
+            "understander": requested,
             "results": results,
         }
     )

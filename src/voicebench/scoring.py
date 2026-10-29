@@ -8,6 +8,7 @@ from voicebench.metrics import wer
 from voicebench.nlu.matcher import match
 from voicebench.schema import ResultSource, Scenario, ScenarioResult
 from voicebench.textnorm import script_profile
+from voicebench.understanding import Understander, understand_with
 
 
 def slots_match(expected: dict[str, str], predicted: dict[str, str]) -> bool:
@@ -27,10 +28,20 @@ def score(
     audio_duration_s: Optional[float] = None,
     detected_language: Optional[str] = None,
     cost_usd: Optional[float] = None,
+    understand: Optional[Understander] = None,
 ) -> ScenarioResult:
-    pred = match(transcript, scenario.domain)
-    intent_ok = pred.intent == scenario.expected_intent
-    slots_ok = slots_match(scenario.expected_slots, pred.slots)
+    """Score ``transcript`` for ``scenario``.
+
+    ``understand`` replaces the built-in matcher (see voicebench.understanding).
+    It raises UnderstanderError if the understander fails or breaks the contract.
+    """
+    if understand is None:
+        pred = match(transcript, scenario.domain)
+        intent, slots = pred.intent, pred.slots
+    else:
+        intent, slots = understand_with(understand, transcript, scenario.domain.value)
+    intent_ok = intent == scenario.expected_intent
+    slots_ok = slots_match(scenario.expected_slots, slots)
     return ScenarioResult(
         scenario_id=scenario.id,
         scenario_version=scenario.version,
@@ -39,8 +50,8 @@ def score(
         detected_language=detected_language,
         transcript_script=script_profile(transcript),
         wer=wer(scenario.reference, transcript),
-        predicted_intent=pred.intent,
-        predicted_slots=pred.slots,
+        predicted_intent=intent,
+        predicted_slots=slots,
         intent_correct=intent_ok,
         slots_correct=slots_ok,
         task_success=intent_ok and slots_ok,

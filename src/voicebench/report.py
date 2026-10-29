@@ -60,6 +60,7 @@ def summarise(run: RunManifest, scenarios: list[Scenario]) -> dict[str, Any]:
         "run_id": run.run_id,
         "source": run.source.value,
         "asr_model": run.asr_model,
+        "understander": run.understander or "builtin",
         "hardware": run.hardware,
         "wall_time_s": run.wall_time_s,
         "warmup_runs": run.warmup_runs,
@@ -73,7 +74,10 @@ def summarise(run: RunManifest, scenarios: list[Scenario]) -> dict[str, Any]:
 
 
 def format_table(summary: dict[str, Any]) -> str:
-    lines = [f"run {summary['run_id']}  [{summary['source']}]  asr={summary['asr_model']}", ""]
+    head = f"run {summary['run_id']}  [{summary['source']}]  asr={summary['asr_model']}"
+    if summary.get("understander", "builtin") != "builtin":
+        head += f"  understander={summary['understander']} (not the built-in matcher)"
+    lines = [head, ""]
     header = f"{'group':<22}{'n':>4}{'task ok':>10}{'intent':>9}{'WER':>8}{'errors':>8}{'p50 ms':>9}{'p95 ms':>9}{'RTF p50':>9}"
     for title in ("overall", "by_language", "by_condition", "by_language_condition"):
         groups = {"all": summary["overall"]} if title == "overall" else summary[title]
