@@ -195,3 +195,11 @@ def test_cli_report_and_rescore(lane, tmp_path, capsys):
     synthetic = ROOT / "results" / "20261018T132344Z-faster-whisper-small-auto.json"
     assert main(["realspeech", "report", str(synthetic)]) == 1
     assert "not a valid real-speech run file" in capsys.readouterr().err
+
+
+def test_run_records_the_commit_from_before_decoding(lane, monkeypatch):
+    manifest, mfile, audio, texts = lane
+    calls = iter(["commit-at-start", "commit-at-end"])
+    monkeypatch.setattr(rs, "git_commit", lambda repo: next(calls))
+    run = rs.run_realspeech(manifest, mfile, audio, Scripted(texts), "pytest")
+    assert run.git_commit == "commit-at-start"

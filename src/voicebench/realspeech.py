@@ -275,6 +275,10 @@ def run_realspeech(
     if missing:
         raise FileNotFoundError(f"{len(missing)} clips missing from {audio_dir} (run `voicebench realspeech fetch`)")
 
+    # The commit is read before decoding, so a commit made while a long run
+    # is in progress is not recorded as the code that produced it.
+    commit = git_commit(Path(manifest_file).resolve().parent)
+
     # One untimed call, as in voicebench.runner.run, so model loading does
     # not land in the first clip's latency.
     transcriber.transcribe_file(audio_dir / clips[0]["file"], language=None)
@@ -305,7 +309,7 @@ def run_realspeech(
         run_id=f"{created:%Y%m%dT%H%M%SZ}-{desc['name'].replace('/', '-')}-realspeech-fleurs-{ds['config']}-{language_policy}",
         created_at=created,
         command=command,
-        git_commit=git_commit(Path(manifest_file).resolve().parent),
+        git_commit=commit,
         manifest_file=manifest_file,
         manifest_sha256=file_sha256(manifest_file),
         dataset={k: ds[k] for k in ("name", "hf_repo", "revision", "config", "split", "license")},
