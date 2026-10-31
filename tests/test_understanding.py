@@ -146,7 +146,22 @@ def test_default_rescore_of_every_committed_run_is_unchanged():
         new = rescore(old, load_scenarios(ROOT / old.scenarios_file), "pytest")
         assert new.understander == BUILTIN
         want = latest.get(old.run_id, old) if old.rescored_from is None else old
-        assert new.results == want.results, old.run_id
+        if new.results == want.results:
+            continue
+        # The only allowed difference: script_profile gained an "other" label
+        # for non-Latin/Devanagari scripts, so the Telugu transcripts of
+        # v1-018 and v1-029 are no longer reported as "none". Intents, slots,
+        # outcomes, WER and every other field must be identical.
+        diffs = [
+            (a.scenario_id, field, getattr(b, field), getattr(a, field))
+            for a, b in zip(new.results, want.results)
+            for field in type(a).model_fields
+            if getattr(a, field) != getattr(b, field)
+        ]
+        assert diffs and all(
+            d[0] in {"v1-018", "v1-029"} and d[1:] == ("transcript_script", "none", "other")
+            for d in diffs
+        ), (old.run_id, diffs)
 
 
 def test_rescore_requires_the_recorded_understander(setup):

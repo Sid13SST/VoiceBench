@@ -19,18 +19,26 @@ from voicebench.textnorm import tokens
         ("mera bachat khate ka balance batao", "banking", "check_balance", {"account_type": "savings"}),
         ("मेरा क्रेडिट कार्ड खो गया है ब्लॉक करो", "banking", "block_card", {"card_type": "credit"}),
         ("someone did a fraud of twenty thousand on my account", "banking", "report_fraud", {"amount": "20000"}),
+        ("please send 5k to rahul", "banking", "transfer_money", {"amount": "5000", "recipient": "rahul"}),
+        ("send 20k to amit from my account", "banking", "transfer_money", {"amount": "20000", "recipient": "amit"}),
         # food
         ("Order number 4821, where is it?", "food", "track_order", {"order_id": "4821"}),
         ("I want two masala dosa", "food", "order_food", {"item": "masala dosa", "quantity": "2"}),
         ("I want 2 masala dosa", "food", "order_food", {"item": "masala dosa", "quantity": "2"}),
         ("2 masala dosa, no wait, make that 3", "food", "order_food", {"item": "masala dosa", "quantity": "3"}),
         ("cancel my order 7310", "food", "cancel_order", {"order_id": "7310"}),
+        # short ids introduced by a marker word are still ids
+        ("cancel order 2", "food", "cancel_order", {"order_id": "2"}),
+        ("track order 45 please", "food", "track_order", {"order_id": "45"}),
         # travel
         ("Book a flight from Bangalore to Delhi on Friday", "travel", "book_ticket",
          {"mode": "flight", "source": "bengaluru", "destination": "delhi", "date": "friday"}),
         ("मुंबई से पुणे की ट्रेन कल के लिए बुक करो", "travel", "book_ticket",
          {"mode": "train", "source": "mumbai", "destination": "pune", "date": "tomorrow"}),
         ("cancel my bus on 5 march", "travel", "cancel_booking", {"mode": "bus", "date": "5 march"}),
+        ("cancel my bus on march 5", "travel", "cancel_booking", {"mode": "bus", "date": "5 march"}),
+        ("book a train to goa on august 15", "travel", "book_ticket",
+         {"mode": "train", "destination": "goa", "date": "15 august"}),
         ("PNR 4521378690 status", "travel", "check_pnr_status", {"pnr": "4521378690"}),
         # support
         ("My laptop is not charging", "support", "report_issue", {"device": "laptop", "issue": "not charging"}),
@@ -51,6 +59,15 @@ def test_self_correction_last_mention_wins():
     assert p.slots["card_type"] == "credit"
     p = match("book a train from delhi to jaipur no no agra", "travel")
     assert (p.slots["source"], p.slots["destination"]) == ("delhi", "agra")
+    p = match("book a train from pune sorry from delhi to mumbai", "travel")
+    assert (p.slots["source"], p.slots["destination"]) == ("delhi", "mumbai")
+
+
+def test_order_verb_is_not_an_order_id():
+    # "order" before a quantity is the verb; order_food has no order_id slot
+    p = match("i want to order 2 masala dosa", "food")
+    assert p.intent == "order_food"
+    assert p.slots.get("quantity") == "2" and "order_id" not in p.slots
 
 
 def test_no_keywords_gives_no_intent_and_no_slots():

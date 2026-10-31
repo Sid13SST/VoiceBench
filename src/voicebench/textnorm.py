@@ -38,17 +38,26 @@ def tokens(text: str) -> list[str]:
 
 
 def script_profile(text: str) -> str:
-    """'devanagari', 'latin', 'mixed' or 'none', judged per word."""
-    dev = lat = 0
+    """'devanagari', 'latin', 'mixed', 'other' or 'none', judged per word.
+
+    'other' is any other script with letters: Whisper once answered a Hindi
+    clip in Telugu script, which should not be hidden in 'none' ('none'
+    keeps meaning no letters at all, e.g. an empty or digits-only transcript).
+    """
+    dev = lat = other = 0
     for word in tokens(text):
         if _DEV_RE.search(word):
             dev += 1
         elif _LAT_RE.search(word):
             lat += 1
+        elif any(c.isalpha() for c in word):
+            other += 1
     if dev and lat:
         return "mixed"
     if dev:
         return "devanagari"
     if lat:
         return "latin"
+    if other:
+        return "other"
     return "none"

@@ -39,6 +39,35 @@ def test_matching_hash_still_works(command, copied_repo, monkeypatch, capsys):
     assert capsys.readouterr().err == ""
 
 
+@pytest.mark.parametrize("command", ["report", "analyze", "rescore"])
+def test_missing_run_file_is_a_clean_error(command, tmp_path, capsys):
+    missing = tmp_path / "nope.json"
+    assert main([command, str(missing)]) == 1
+    out = capsys.readouterr()
+    assert out.out == "" and "no such file" in out.err and "Traceback" not in out.err
+
+
+@pytest.mark.parametrize("command", ["report", "analyze", "rescore", "compare"])
+def test_malformed_run_file_is_a_clean_error(command, tmp_path, capsys):
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"broken": true', encoding="utf-8")
+    argv = [command, str(bad)] + ([str(bad)] if command == "compare" else [])
+    assert main(argv) == 1
+    out = capsys.readouterr()
+    assert out.out == "" and "not a valid run file" in out.err and "Traceback" not in out.err
+
+
+def test_analyze_unknown_scenario_is_a_clean_error(copied_repo, monkeypatch, capsys):
+    root, run = copied_repo
+    data = json.loads(run.read_text(encoding="utf-8"))
+    data["results"][0]["scenario_id"] = "v1-999"
+    run.write_text(json.dumps(data), encoding="utf-8")
+    monkeypatch.chdir(root)
+    assert main(["analyze", str(run)]) == 1
+    out = capsys.readouterr()
+    assert "v1-999" in out.err and "Traceback" not in out.err
+
+
 @pytest.mark.parametrize("command", ["report", "analyze"])
 def test_mismatching_hash_is_refused(command, copied_repo, monkeypatch, capsys):
     root, run = copied_repo

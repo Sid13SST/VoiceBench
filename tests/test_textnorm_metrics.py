@@ -27,6 +27,8 @@ def test_script_profile():
     assert script_profile("पैसे भेजो") == "devanagari"
     assert script_profile("मेरा credit card") == "mixed"
     assert script_profile("1234 !!") == "none"
+    # Whisper once answered a Hindi clip in Telugu script: not hidden in "none"
+    assert script_profile("నినినినినిని") == "other"
 
 
 @pytest.mark.parametrize(

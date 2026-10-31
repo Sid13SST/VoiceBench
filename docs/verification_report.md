@@ -19,6 +19,20 @@
 > section 4.4 (`.github/workflows/ci.yml` is unchanged since `0f996db`).
 > For D4, `3377680` added a README note on the 2.80 GHz run.
 >
+> **Status (2026-10-31).** A later batch fixed: short order ids introduced by
+> a marker word ("cancel order 2"), L3 (the source city is now the *last*
+> marked mention, matching the self-correction rule), L4 ("august 15" parses;
+> "5k" is read as 5000), L5 (`script_profile` now reports `other` for
+> non-Latin/Devanagari scripts instead of hiding them in `none`; this is the
+> one intended rescore difference, on `v1-018` and `v1-029`'s
+> `transcript_script`), L7 (a single word must repeat 5+ times to count as a
+> loop; no committed transcript's flag changes) and L1 (`report`, `analyze`,
+> `compare` and `rescore` print a one-line error for a missing or malformed
+> run file instead of a traceback). Re-verified: rescore of the committed
+> runs changes no transcript and no task outcome. Left as documented design:
+> L2 (ties go to the first-listed intent) and L6 (a hi-en clip detected as
+> `en` counts as wrong language). L9 and the CI weak spots remain open.
+>
 > The summary says the transcript match with the day 3 runs "confirms the
 > documented CPU dependence". Later runs show that the transcript
 > differences are machine-dependent, but the cause is not isolated; see

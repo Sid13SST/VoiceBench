@@ -17,8 +17,10 @@ Rules, all of them deliberately simple:
   "ending" or "ending in") is not an amount.
 - device and issue: the first mention wins (the device named first is the
   subject: "my phone's app is not loading" -> phone).
-- source city: the city after "from" or before "से"; destination: the last
-  other city mentioned.
+- source city: the last city after "from" or before "से" (so a corrected
+  source wins, like the other slots); destination: the last other city
+  mentioned.
+- "5k" is read as 5000; "15 august" and "august 15" are the same date.
 """
 
 from __future__ import annotations
@@ -40,6 +42,9 @@ _DIGIT_GROUP_RE = re.compile(rf"(?<=[{_D}]),(?=[{_D}])")
 # Not next to a decimal point, so "1.5-25 lakh" is not misread.
 _HYPHEN_GROUPS_RE = re.compile(rf"(?<![{_D}])(?<![{_D}]\.)[{_D}]+(?:-[{_D}]+)+(?!\.[{_D}])")
 _DECIMAL_RE = re.compile(rf"(?<![{_D}.])([{_D}]+)\.([{_D}]+)(?![.{_D}])(?:(\s+)(\S+))?")
+# "5k" -> "5000". ASCII digits only; not "5km", and not the fraction of
+# "1.5k" (a decimal without a scale word stays unparsed, per _decimal).
+_K_AMOUNT_RE = re.compile(r"(?<![0-9.])([0-9]+)k(?![a-z0-9])")
 _SCALE = {**{w: 100 for w in HUNDRED}, **{w: 1000 for w in THOUSAND}, **{w: 100_000 for w in LAKH}}
 
 
@@ -131,8 +136,9 @@ def _cities(tokens: list[str]) -> tuple[str | None, str | None]:
         before = tokens[m.start - 1] if m.start > 0 else None
         after = tokens[m.end] if m.end < len(tokens) else None
         if before in lx.SOURCE_MARKERS_BEFORE or after in lx.SOURCE_MARKERS_AFTER:
+            # no break: the last marked city wins, like the other slots, so a
+            # self-correction ("from pune, sorry, from delhi") keeps delhi
             source = m.value
-            break
     others = [m for m in mentions if m.value != source]
     return source, (others[-1].value if others else None)
 
@@ -140,10 +146,15 @@ def _cities(tokens: list[str]) -> tuple[str | None, str | None]:
 def _date(tokens: list[str], numbers: list[NumberSpan]) -> str | None:
     found: list[tuple[int, str]] = [(m.start, m.value) for m in find_mentions(tokens, lx.WEEKDAYS)]
     by_end = {n.end: n for n in numbers}
+    by_start = {n.start: n for n in numbers}
     for m in find_mentions(tokens, lx.MONTHS):
         n = by_end.get(m.start)
         if n and 1 <= int(n.value) <= 31:
             found.append((n.start, f"{int(n.value)} {m.value}"))
+        # month-first order ("august 15") gives the same canonical form
+        n2 = by_start.get(m.end)
+        if n2 and not n2.digit_sequence and 1 <= int(n2.value) <= 31:
+            found.append((n2.start, f"{int(n2.value)} {m.value}"))
     return max(found)[1] if found else None
 
 
@@ -193,7 +204,10 @@ def extract_slots(intent: str, domain: Domain, tokens: list[str], text: str) -> 
         qty = [n for n in numbers if not n.digit_sequence and 1 <= int(n.value) <= 50]
         slots["quantity"] = qty[-1].value if qty else None
     if "order_id" in allowed:
-        ids = [n for n in numbers if n.digit_sequence and len(n.value) >= 3]
+        ids = [
+            n for n in numbers
+            if (n.digit_sequence and len(n.value) >= 3) or _is_id_number(n, tokens, numbers)
+        ]
         slots["order_id"] = ids[-1].value if ids else None
     if "pnr" in allowed:
         pnrs = [n for n in numbers if n.digit_sequence and len(n.value) == 10]
@@ -237,10 +251,15 @@ def _hyphen_groups(m: re.Match) -> str:
     return m.group() if all(len(g) == 1 for g in groups) else "".join(groups)
 
 
+def _k_amount(m: re.Match) -> str:
+    return str(int(m.group(1)) * 1000)
+
+
 def match(transcript: str, domain: Domain | str) -> Prediction:
     domain = Domain(domain)
     text = _DIGIT_GROUP_RE.sub("", transcript)
     text = _HYPHEN_GROUPS_RE.sub(_hyphen_groups, text)
+    text = _K_AMOUNT_RE.sub(_k_amount, text)
     text = normalise(_DECIMAL_RE.sub(_decimal, text))
     tokens = text.split()
     intent, scores = classify(tokens, domain, text)

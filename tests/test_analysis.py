@@ -18,6 +18,8 @@ from voicebench.schema import RunManifest, Scenario, ScenarioResult
         ("t-t-t-t-t-t-t-t-t-t-t-t", True),
         ("send two thousand no sorry four thousand", False),
         ("ok ok ok", False),  # three repeats is not a loop
+        ("no no no no i said four", False),  # natural self-correction is not a loop
+        ("art art art art art art art", True),  # a real loop transcript (v1-045) repeats 7+ times
         ("transfer 1000000000000 rupees", False),  # long numbers are not loops
         ("", False),
     ],

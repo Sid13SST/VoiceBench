@@ -7,7 +7,7 @@ problems explain later ones (a repetition loop usually also means no intent):
 1. pipeline_error     the pipeline raised an error for this scenario
 2. wrong_language     language auto-detect chose a language other than the
                       caller's (only checked when the run used auto-detect)
-3. repetition_loop    the transcript repeats a word or phrase (up to 6 words) 4+ times
+3. repetition_loop    the transcript repeats a phrase (up to 6 words) 4+ times or one word 5+ times
                       in a row, or a 1-3 character non-digit unit 10+ times
 4. agent_prompt_leak  barge-in clip whose transcript contains at least 30%
                       of the agent prompt's words
@@ -48,9 +48,13 @@ def has_repetition_loop(text: str, min_repeats: int = 4, max_ngram: int = 6) -> 
         return True
     toks = tokens(text)
     for n in range(1, max_ngram + 1):
-        for i in range(len(toks) - n * min_repeats + 1):
+        # One word repeated 4 times is natural self-correction ("no no no no,
+        # I said four"); the observed Whisper loops repeat it 7+ times. A
+        # phrase of 2+ words does not occur naturally 4 times in a row.
+        need = min_repeats + 1 if n == 1 else min_repeats
+        for i in range(len(toks) - n * need + 1):
             gram = toks[i : i + n]
-            if all(toks[i + k * n : i + (k + 1) * n] == gram for k in range(1, min_repeats)):
+            if all(toks[i + k * n : i + (k + 1) * n] == gram for k in range(1, need)):
                 return True
     return False
 

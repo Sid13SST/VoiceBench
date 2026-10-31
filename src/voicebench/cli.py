@@ -27,6 +27,17 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_scenarios(path: str):
+    """Load a scenario file, printing a clean error instead of a traceback."""
+    try:
+        return load_scenarios(path)
+    except ScenarioFileError as exc:
+        print(exc, file=sys.stderr)
+    except FileNotFoundError:
+        print(f"{path}: no such file", file=sys.stderr)
+    return None
+
+
 def _cmd_synth(args: argparse.Namespace) -> int:
     import json
     import tempfile
@@ -34,7 +45,9 @@ def _cmd_synth(args: argparse.Namespace) -> int:
     from voicebench.audio.build import build_all
     from voicebench.audio.tts import EspeakTTS, TTSUnavailable
 
-    scenarios = load_scenarios(args.path)
+    scenarios = _load_scenarios(args.path)
+    if scenarios is None:
+        return 1
     command = f"voicebench synth {args.path} --out {args.out}"
     tmp = tempfile.TemporaryDirectory() if args.check else None
     out = tmp.name if tmp else args.out
@@ -114,7 +127,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
     understand = _load_understander(args.understander)
     if understand is False:
         return 2
-    scenarios = load_scenarios(args.scenarios)
+    scenarios = _load_scenarios(args.scenarios)
+    if scenarios is None:
+        return 1
     if args.asr == "oracle":
         transcriber = ReferenceTranscriber()
     else:
@@ -136,17 +151,33 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_run(path: str):
+    """Load a saved run file, printing a clean error instead of a traceback."""
+    from pydantic import ValidationError
+
+    from voicebench.runner import load_run
+
+    try:
+        return load_run(path)
+    except FileNotFoundError:
+        print(f"{path}: no such file", file=sys.stderr)
+    except (ValidationError, ValueError) as exc:
+        print(f"{path}: not a valid run file: {str(exc).splitlines()[0]}", file=sys.stderr)
+    return None
+
+
 def _cmd_rescore(args: argparse.Namespace) -> int:
     from voicebench.report import format_table, summarise
-    from voicebench.runner import UnderstanderMismatch, load_run, rescore, save
+    from voicebench.runner import UnderstanderMismatch, rescore, save
 
     understand = _load_understander(args.understander)
     if understand is False:
         return 2
-    previous = load_run(args.run)
-    scenarios = load_scenarios(previous.scenarios_file)
-    if file_sha256(previous.scenarios_file) != previous.scenarios_sha256:
-        print("scenario file changed since this run; refusing to rescore", file=sys.stderr)
+    previous = _load_run(args.run)
+    if previous is None:
+        return 1
+    scenarios = _scenarios_of_run(previous, args.run, "rescore")
+    if scenarios is None:
         return 1
     try:
         manifest = rescore(previous, scenarios, " ".join(["voicebench", *sys.argv[1:]]),
@@ -162,9 +193,16 @@ def _cmd_rescore(args: argparse.Namespace) -> int:
 
 def _cmd_compare(args: argparse.Namespace) -> int:
     from voicebench.compare import compare_runs
-    from voicebench.runner import load_run
 
-    c = compare_runs(load_run(args.a), load_run(args.b))
+    a = _load_run(args.a)
+    b = _load_run(args.b)
+    if a is None or b is None:
+        return 1
+    try:
+        c = compare_runs(a, b)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
     print(f"{c['a']}\n  vs {c['b']}")
     print(f"scenarios compared: {c['compared']}; same hardware: {c['same_hardware']}; "
           f"same model revision: {c['same_model']}")
@@ -200,21 +238,28 @@ def _scenarios_of_run(run, run_path: str, action: str):
 
 def _cmd_analyze(args: argparse.Namespace) -> int:
     from voicebench.analysis import analyse_run, format_analysis
-    from voicebench.runner import load_run
 
-    run = load_run(args.run)
+    run = _load_run(args.run)
+    if run is None:
+        return 1
     scenarios = _scenarios_of_run(run, args.run, "analyze")
     if scenarios is None:
         return 1
-    print(format_analysis(analyse_run(run, scenarios)))
+    try:
+        analysis = analyse_run(run, scenarios)
+    except KeyError as exc:
+        print(f"run names scenario {exc} which is not in the scenario file", file=sys.stderr)
+        return 1
+    print(format_analysis(analysis))
     return 0
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
     from voicebench.report import format_table, summarise
-    from voicebench.runner import load_run
 
-    run = load_run(args.run)
+    run = _load_run(args.run)
+    if run is None:
+        return 1
     scenarios = _scenarios_of_run(run, args.run, "report")
     if scenarios is None:
         return 1
