@@ -464,7 +464,11 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
 
 def _variant_key(word: str) -> str:
     """A word with nasalisation and nukta marks folded, for spotting spelling-only differences."""
-    return word.replace("ँ", "ं").replace("़", "")
+    return fold_spelling_variants(word)
+
+
+_UNASPIRATE = str.maketrans("खघछझठढथधफभ", "कगचजटडतदपब")
+_SHORTEN = str.maketrans("ीूईऊ", "िुइउ")
 
 
 def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
@@ -475,7 +479,13 @@ def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
     - ``digits``: either side contains a digit (ASCII or Devanagari).
     - ``script``: one side is Devanagari and the other Latin.
     - ``spelling_variant``: equal once chandrabindu/anusvara and nukta are folded.
+    - ``aspiration``: then equal once aspirated consonants are written
+      unaspirated (ख->क, घ->ग, छ->च, झ->ज, ठ->ट, ढ->ड, थ->त, ध->द, फ->प, भ->ब),
+      e.g. "गंभीर" -> "गंबीर", "था" -> "ता".
+    - ``vowel_length``: then equal once long i/u are written short (ी->ि, ू->ु, ई->इ, ऊ->उ).
     - ``other``: anything else.
+
+    These are descriptions of the errors, not corrections: WER counts all of them.
 
     Insertions and deletions are counted as they are; ``split_or_join``
     counts reference words that the hypothesis wrote as two adjacent words,
@@ -508,6 +518,10 @@ def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
                         kind = "script"
                     elif _variant_key(a) == _variant_key(b):
                         kind = "spelling_variant"
+                    elif _variant_key(a).translate(_UNASPIRATE) == _variant_key(b).translate(_UNASPIRATE):
+                        kind = "aspiration"
+                    elif _variant_key(a).translate(_SHORTEN) == _variant_key(b).translate(_SHORTEN):
+                        kind = "vowel_length"
                     else:
                         kind = "other"
                     subs[kind] += 1
