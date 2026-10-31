@@ -9,3 +9,9 @@ dist/
 
 # Real-speech audio (FLEURS) is downloaded at run time, never committed.
 .cache/
+
+# Gnani lane: API keys live only in the environment; synthesized audio is never committed.
+.env
+.env.*
+.cache/gnani/
+results/gnani/**/*.wav
