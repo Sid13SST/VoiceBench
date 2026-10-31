@@ -157,6 +157,7 @@ def test_run_policies_and_summary(lane):
     assert s["corpus_wer"] == pytest.approx(3 / 8)  # 0 of 5 + 3 of 3 reference words
     assert s["corpus_wer_detected_hi"] == 0 and s["n_detected_hi"] == 1
     assert s["corpus_wer_spelling_folded"] == s["corpus_wer"]
+    assert (s["latency_p50_loop_ms"], s["latency_p50_no_loop_ms"]) == (None, 500.0)
     assert "REAL SPEECH, external audio" in rs.format_realspeech(s)
 
     asr = Scripted(texts)
@@ -231,3 +232,19 @@ def test_numbers_recovered_uses_the_matcher_parser():
     assert rs.numbers_recovered(ref, "") == 0
     clip = rs.score_clip({"id": "x", "reference": ref}, "दस हज़ार लोग")
     assert (clip.reference_numbers, clip.numbers_recovered) == (["10000", "20"], 1)
+
+
+def test_compare_isolates_the_misdetected_clips(lane, tmp_path, capsys):
+    manifest, mfile, audio, texts = lane
+    auto = rs.run_realspeech(manifest, mfile, audio, Scripted(texts), "pytest", language_policy="auto")
+    hint_texts = {**texts, "b": ("वह बाज़ार गई", "hi")}  # the clip auto labelled "ur" is right with the hint
+    hint = rs.run_realspeech(manifest, mfile, audio, Scripted(hint_texts), "pytest", language_policy="hint")
+    c = rs.compare_realspeech(auto, hint)
+    assert (c["compared"], c["identical_transcripts"], c["detected_hi_in_a"], c["identical_where_a_detected_hi"]) == (2, 1, 1, 1)
+    assert (c["misdetected_in_a"], c["misdetected_wer_a"], c["misdetected_wer_b"]) == (1, 1.0, 0.0)
+    pa, pb = save(auto, tmp_path / "r"), save(hint, tmp_path / "r")
+    assert main(["realspeech", "compare", str(pa), str(pb)]) == 0
+    assert "clips A detected as another language: 1, corpus WER A 1.000 / B 0.000" in capsys.readouterr().out
+    other = auto.model_copy(update={"manifest_sha256": "f" * 64})
+    with pytest.raises(ValueError, match="different manifests"):
+        rs.compare_realspeech(other, hint)

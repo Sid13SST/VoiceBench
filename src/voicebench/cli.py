@@ -368,6 +368,27 @@ def _cmd_realspeech_rescore(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_realspeech_compare(args: argparse.Namespace) -> int:
+    from voicebench import realspeech as rs
+
+    a, b = _load_realspeech_run(args.a), _load_realspeech_run(args.b)
+    if a is None or b is None:
+        return 1
+    try:
+        c = rs.compare_realspeech(a, b)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    f = lambda x: "-" if x is None else f"{x:.3f}"  # noqa: E731
+    print(f"{c['a']}\n  vs {c['b']}  (real speech, {c['compared']} clips)")
+    print(f"identical transcripts: {c['identical_transcripts']}; of the {c['detected_hi_in_a']} clips A detected "
+          f"as hi: {c['identical_where_a_detected_hi']}")
+    print(f"clips A detected as another language: {c['misdetected_in_a']}, corpus WER "
+          f"A {f(c['misdetected_wer_a'])} / B {f(c['misdetected_wer_b'])}")
+    print(f"repetition loops: A {c['loops_a']}, B {c['loops_b']}, both {c['loops_both']}")
+    return 0
+
+
 def _cmd_realspeech_report(args: argparse.Namespace) -> int:
     from voicebench import realspeech as rs
 
@@ -481,6 +502,11 @@ def main(argv: list[str] | None = None) -> int:
     p_rs.add_argument("run")
     p_rs.add_argument("--out", default=_rs.DEFAULT_RESULTS_DIR)
     p_rs.set_defaults(func=_cmd_realspeech_rescore)
+
+    p_rc = rsub.add_parser("compare", help="compare two real-speech runs clip by clip (e.g. auto vs hint)")
+    p_rc.add_argument("a")
+    p_rc.add_argument("b")
+    p_rc.set_defaults(func=_cmd_realspeech_compare)
 
     p_rp = rsub.add_parser("report", help="print WER, language, loop, latency and word-edit breakdown of a real-speech run")
     p_rp.add_argument("run")

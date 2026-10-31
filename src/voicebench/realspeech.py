@@ -455,10 +455,40 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
         "audio_s": sum(r.audio_duration_s or 0 for r in ok),
         "latency_p50_ms": percentile(lat, 50),
         "latency_p95_ms": percentile(lat, 95),
+        "latency_p50_loop_ms": percentile([r.latency_ms for r in timed if r.repetition_loop], 50),
+        "latency_p50_no_loop_ms": percentile([r.latency_ms for r in timed if not r.repetition_loop], 50),
         "rtf_p50": percentile(rtf, 50),
         "rtf_p95": percentile(rtf, 95),
         "wall_time_s": run.wall_time_s,
         "hardware": run.hardware,
+    }
+
+
+def compare_realspeech(a: RealSpeechRun, b: RealSpeechRun) -> dict[str, Any]:
+    """Clip-by-clip comparison of two runs over the same manifest (e.g. auto-detect vs language hint).
+
+    ``misdetected`` are the clips run A labelled with a language other than
+    Hindi; their corpus WER is given under both runs, which shows how much
+    of the difference between the runs those clips account for.
+    """
+    if a.manifest_sha256 != b.manifest_sha256:
+        raise ValueError("runs used different manifests")
+    bb = {r.clip_id: r for r in b.results if r.error is None}
+    pairs = [(r, bb[r.clip_id]) for r in a.results if r.error is None and r.clip_id in bb]
+    mis = [(x, y) for x, y in pairs if x.detected_language != HINT_LANGUAGE]
+    rest = [(x, y) for x, y in pairs if x.detected_language == HINT_LANGUAGE]
+    wer_of = lambda rs_: corpus_wer((r.reference, r.transcript or "") for r in rs_) if rs_ else None  # noqa: E731
+    return {
+        "a": a.run_id, "b": b.run_id, "compared": len(pairs),
+        "identical_transcripts": sum(1 for x, y in pairs if x.transcript == y.transcript),
+        "detected_hi_in_a": len(rest),
+        "identical_where_a_detected_hi": sum(1 for x, y in rest if x.transcript == y.transcript),
+        "misdetected_in_a": len(mis),
+        "misdetected_wer_a": wer_of([x for x, _ in mis]),
+        "misdetected_wer_b": wer_of([y for _, y in mis]),
+        "loops_a": sum(1 for x, _ in pairs if x.repetition_loop),
+        "loops_b": sum(1 for _, y in pairs if y.repetition_loop),
+        "loops_both": sum(1 for x, y in pairs if x.repetition_loop and y.repetition_loop),
     }
 
 
@@ -568,6 +598,9 @@ def format_realspeech(summary: dict[str, Any], breakdown: Optional[dict[str, Any
     if summary["latency_p50_ms"] is not None:
         lines.append(f"latency p50 / p95          {summary['latency_p50_ms']:.0f} / {summary['latency_p95_ms']:.0f} ms"
                      f"  (RTF {summary['rtf_p50']:.2f} / {summary['rtf_p95']:.2f}, {summary['audio_s']:.0f} s audio)")
+    if summary["latency_p50_loop_ms"] is not None:
+        lines.append(f"latency p50 loop / no loop {summary['latency_p50_loop_ms']:.0f} / "
+                     f"{summary['latency_p50_no_loop_ms']:.0f} ms")
     if summary.get("wall_time_s") is not None:
         lines.append(f"wall time                  {summary['wall_time_s']:.0f} s")
     hw = summary.get("hardware") or {}
