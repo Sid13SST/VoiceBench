@@ -25,6 +25,7 @@ from voicebench.dashboard.data import (
     run_overview,
 )
 from voicebench.dashboard.data import word_diff
+from voicebench.gnani import COMPARABILITY, external_provider
 from voicebench.realspeech import clip_category, summarise_realspeech, word_error_breakdown
 from voicebench.understanding import BUILTIN
 
@@ -33,22 +34,36 @@ SCENARIO_ID_RE = re.compile(r"^v\d+-\d{3}$")
 
 
 def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "audio/v1",
-               repo_root: str | Path | None = None, realspeech_dir: str | Path | None = None) -> FastAPI:
+               repo_root: str | Path | None = None, realspeech_dir: str | Path | None = None,
+               gnani_dir: str | Path | None = None) -> FastAPI:
     store = RunStore(results_dir, repo_root)
     # Real-speech runs (external human audio) have their own directory and pages.
     real = RealSpeechStore(realspeech_dir if realspeech_dir is not None else Path(results_dir) / "realspeech")
+    # External-API runs (Gnani lane, docs/GNANI_QA.md): their own directories and their own
+    # section of the run list, never mixed into the local runs above.
+    gnani = Path(gnani_dir) if gnani_dir is not None else Path(results_dir) / "gnani"
+    gnani_stores = {lane: RunStore(gnani / lane, store.repo_root) for lane in ("synthetic", "roundtrip")}
+    gnani_real = RealSpeechStore(gnani / "realspeech")
     audio_dir = Path(audio_dir)
     app = FastAPI(title="VoiceBench", docs_url="/api/docs", redoc_url=None)
 
-    def _entry(run_id: str):
+    def _find(run_id: str):
+        """(entry, the store it is in, its Gnani lane or None)."""
         entry = store.get(run_id)
-        if entry is None:
-            raise HTTPException(404, f"no run {run_id!r}")
-        return entry
+        if entry is not None:
+            return entry, store, None
+        for lane, s in gnani_stores.items():
+            entry = s.get(run_id)
+            if entry is not None:
+                return entry, s, lane
+        raise HTTPException(404, f"no run {run_id!r}")
+
+    def _entry(run_id: str):
+        return _find(run_id)[0]
 
     def _overview(entry):
         try:
-            return run_overview(entry, store)
+            return run_overview(entry, _find(entry.run_id)[1])
         except RunUnusable as e:
             raise HTTPException(422, f"run {entry.run_id!r} ({entry.path.name}) cannot be shown: {e}") from None
 
@@ -62,17 +77,31 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
                 unusable.append({"file": e.path.name, "reason": str(err)})
                 continue
             rows.append({"entry": e, "overall": ov["summary"]["overall"], "hash_ok": ov["hash_ok"]})
+        gnani_rows, gnani_invalid = [], []
+        for lane, s in gnani_stores.items():
+            for e in s.runs():
+                try:
+                    ov = run_overview(e, s)
+                except RunUnusable as err:
+                    gnani_invalid.append(f"{e.path.name}: {err}")
+                    continue
+                gnani_rows.append({"entry": e, "lane": lane, "overall": ov["summary"]["overall"]})
+            gnani_invalid += s.invalid
+        gnani_real_rows = [{"run": r, "s": summarise_realspeech(r)} for r in gnani_real.runs()]
+        gnani_invalid += gnani_real.invalid
         return TEMPLATES.TemplateResponse(
             request,
             "index.html",
             {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": str(store.results_dir),
              "real_rows": [{"run": r, "s": summarise_realspeech(r)} for r in real.runs()],
-             "real_invalid": real.invalid, "real_dir": str(real.directory)},
+             "real_invalid": real.invalid, "real_dir": str(real.directory),
+             "gnani_rows": gnani_rows, "gnani_real_rows": gnani_real_rows, "gnani_invalid": gnani_invalid,
+             "gnani_dir": str(gnani)},
         )
 
     @app.get("/realspeech/{run_id}", response_class=HTMLResponse)
     def realspeech_page(request: Request, run_id: str, sort: str = Query("wer")):
-        run = real.get(run_id)
+        run = real.get(run_id) or gnani_real.get(run_id)
         if run is None:
             raise HTTPException(404, f"no real-speech run {run_id!r}")
         clips = list(run.results)
@@ -81,6 +110,7 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         return TEMPLATES.TemplateResponse(
             request, "realspeech.html",
             {"m": run, "s": summarise_realspeech(run), "b": word_error_breakdown(run),
+             "external_api": external_provider(run.asr_config), "comparability": COMPARABILITY,
              "clips": [{"r": r, "category": clip_category(r, run.language_policy),
                         "diff": word_diff(r.reference, r.transcript or "") if r.error is None else []}
                        for r in clips],
@@ -106,12 +136,12 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         condition: Optional[str] = Query(None),
         status: str = Query("fail"),
     ):
-        entry = _entry(run_id)
+        entry, owner, gnani_lane = _find(run_id)
         language = language if language in LANGUAGES else None
         condition = condition if condition in CONDITIONS else None
         status = status if status in ("fail", "pass", "all") else "fail"
         try:
-            ov = run_overview(entry, store)
+            ov = run_overview(entry, owner)
         except RunUnusable as e:
             return TEMPLATES.TemplateResponse(
                 request, "unusable.html", {"m": entry.manifest, "file": entry.path.name, "reason": str(e)},
@@ -130,7 +160,11 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
                 "languages": LANGUAGES,
                 "conditions": CONDITIONS,
                 "f": {"language": language, "condition": condition, "status": status},
-                "has_audio": audio_dir.is_dir(),
+                # A round-trip run was not made from the committed audio, so it is not offered.
+                "has_audio": audio_dir.is_dir() and gnani_lane != "roundtrip",
+                "gnani_lane": gnani_lane,
+                "external_api": external_provider(m.asr_config),
+                "comparability": COMPARABILITY,
             },
         )
 
@@ -143,6 +177,19 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
              "understander": e.manifest.understander or BUILTIN}
             for e in store.runs()
         ]
+
+    @app.get("/api/gnani")
+    def api_gnani():
+        """External-API runs only (Gnani lane); /api/runs lists the local runs."""
+        out = [{"run_id": e.run_id, "lane": lane, "created_at": e.manifest.created_at,
+                "asr_model": e.manifest.asr_model, "language_policy": e.manifest.language_policy,
+                "file": e.path.name, "external_api": external_provider(e.manifest.asr_config),
+                "understander": e.manifest.understander or BUILTIN}
+               for lane, s in gnani_stores.items() for e in s.runs()]
+        out += [{"run_id": r.run_id, "lane": "realspeech", "created_at": r.created_at, "asr_model": r.asr_model,
+                 "language_policy": r.language_policy, "external_api": external_provider(r.asr_config)}
+                for r in gnani_real.runs()]
+        return out
 
     @app.get("/api/runs/{run_id}")
     def api_run(run_id: str):

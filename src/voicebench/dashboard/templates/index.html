@@ -55,4 +55,38 @@
 {% endfor %}
 </tbody></table></div>
 {% endif %}
+
+<h2 id="gnani">External API runs (Gnani)</h2>
+<div class="banner"><b>Not part of the local benchmark, and not comparable with it.</b> These runs call Gnani.ai's remote, paid Prisma STT and Timbre TTS APIs on small subsets of the items. They are never merged with, averaged with or ranked against the local Whisper runs above. Run files in <code>{{ gnani_dir }}</code>; see docs/GNANI_QA.md.</div>
+{% if gnani_invalid %}<div class="banner">Skipped files: {{ gnani_invalid | join(", ") }}</div>{% endif %}
+{% if not gnani_rows and not gnani_real_rows %}
+<p>No external API runs.</p>
+{% else %}
+<div class="table-wrap"><table>
+<thead><tr><th>run</th><th>lane</th><th>system</th><th>language</th><th class="num">items</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
+<tbody>
+{% for row in gnani_rows %}{% set m = row.entry.manifest %}
+<tr>
+  <td><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+  <td class="small"><span class="tag">external API</span> {% if row.lane == "roundtrip" %}TTS + STT round trip{% else %}synthetic audio{% endif %}</td>
+  <td>{{ m.asr_model }}<div class="small muted">understander {{ ui.understander(m.understander) }}</div></td>
+  <td>{{ m.language_policy or "-" }}</td>
+  <td class="num">{{ row.overall.n }}</td>
+  <td class="num">{{ row.overall.task_success }}/{{ row.overall.n }}</td>
+  <td class="num">{{ "%.2f"|format(row.overall.corpus_wer) if row.overall.corpus_wer is not none else "-" }}</td>
+</tr>
+{% endfor %}
+{% for row in gnani_real_rows %}{% set m = row.run %}{% set s = row.s %}
+<tr>
+  <td><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+  <td class="small"><span class="tag">external API</span> real speech, {{ m.dataset.name }} {{ m.dataset.config }}</td>
+  <td>{{ m.asr_model }}</td>
+  <td>{{ m.language_policy }}</td>
+  <td class="num">{{ s.n }}</td>
+  <td class="num">-</td>
+  <td class="num">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
 {% endblock %}

@@ -9,6 +9,7 @@
   · language {{ m.language_policy }} · commit <code>{{ (m.git_commit or "unknown")[:12] }}</code><br>
   command <code>{{ m.command }}</code>
 </p>
+{% if external_api %}<div class="banner"><b>External API run ({{ external_api }}).</b> Transcribed by a remote, paid STT service on a subset of the clips. {{ comparability[0] | upper }}{{ comparability[1:] }}.</div>{% endif %}
 {% if m.rescored_from %}<div class="banner">Re-scored from <a href="/realspeech/{{ m.rescored_from }}">{{ m.rescored_from }}</a>: same transcripts, scored again with the code at this commit.</div>{% endif %}
 
 <h2>Summary</h2>

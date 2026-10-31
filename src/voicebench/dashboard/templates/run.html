@@ -18,6 +18,7 @@
   command <code>{{ m.command }}</code>
 </p>
 {% if m.source.value == "fixture" %}<div class="banner"><b>Fixture data.</b> These results are hand-written for testing and are not a measurement.</div>{% endif %}
+{% if external_api %}<div class="banner"><b>External API run ({{ external_api }}).</b> {% if gnani_lane == "roundtrip" %}TTS + STT round trip: the reference was synthesized by the Gnani TTS API and transcribed by the Gnani STT API, so these numbers measure both services together.{% else %}Transcribed by a remote, paid STT service on a subset of the scenarios.{% endif %} {{ comparability[0] | upper }}{{ comparability[1:] }}. Latency includes the network round trip.</div>{% endif %}
 {% if m.asr_model == "oracle-reference" %}<div class="banner"><b>Not an ASR result.</b> The reference text was used as the transcript, to check the pipeline.</div>{% endif %}
 {% if m.understander and m.understander != "builtin" %}<div class="banner"><b>External understander.</b> Intent and slots came from <code class="name">{{ m.understander }}</code>, not the built-in matcher. Compare it with builtin runs as a different system.</div>{% endif %}
 {% if m.rescored_from %}<div class="banner">Re-scored from <a href="/runs/{{ m.rescored_from }}">{{ m.rescored_from }}</a>: same transcripts, scored again with the code at this commit.</div>{% endif %}
