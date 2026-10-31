@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ m.run_id }} · real speech · VoiceBench{% endblock %}
+{% block body %}
+<p class="small"><a href="/#realspeech">← all runs</a></p>
+<h1>{{ m.run_id }}</h1>
+<div class="banner"><b>Real speech, external audio.</b> {{ m.dataset.name }} {{ m.dataset.config }}/{{ m.dataset.split }} ({{ m.dataset.license }}, revision <code>{{ m.dataset.revision[:12] }}</code>): human read speech, not the synthetic espeak-ng benchmark. Recognition only: there are no intents, slots or task success here.</div>
+<p class="muted small">
+  ASR <b>{{ m.asr_model }}</b>{% if m.asr_model_version %} ({{ m.asr_config.backend }} {{ m.asr_model_version }}){% endif %}
+  · language {{ m.language_policy }} · commit <code>{{ (m.git_commit or "unknown")[:12] }}</code><br>
+  command <code>{{ m.command }}</code>
+</p>
+{% if m.rescored_from %}<div class="banner">Re-scored from <a href="/realspeech/{{ m.rescored_from }}">{{ m.rescored_from }}</a>: same transcripts, scored again with the code at this commit.</div>{% endif %}
+
+<h2>Summary</h2>
+<div class="table-wrap"><table><tbody>
+<tr><th>clips</th><td class="num">{{ s.n }} ({{ s.errors }} pipeline errors, {{ s.reference_words }} reference words)</td></tr>
+<tr><th>corpus WER</th><td class="num">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }}</td></tr>
+<tr><th>corpus WER, clips detected as hi</th><td class="num">{{ "%.3f"|format(s.corpus_wer_detected_hi) if s.corpus_wer_detected_hi is not none else "-" }} ({{ s.n_detected_hi }} clips)</td></tr>
+<tr><th>per-clip WER mean / median</th><td class="num">{{ "%.3f"|format(s.clip_wer_mean) if s.clip_wer_mean is not none else "-" }} / {{ "%.3f"|format(s.clip_wer_median) if s.clip_wer_median is not none else "-" }}</td></tr>
+<tr><th>clips with WER 0 / WER &gt; 1</th><td class="num">{{ s.clips_wer_zero }} / {{ s.clips_wer_over_1 }}</td></tr>
+<tr><th>detected language</th><td class="num">{% for k, v in s.detected_languages.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+<tr><th>transcript script</th><td class="num">{% for k, v in s.transcript_scripts.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+<tr><th>repetition loops</th><td class="num">{{ s.repetition_loops }}</td></tr>
+<tr><th>primary categories</th><td class="num">{% for k, v in s.categories.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+{% if s.latency_p50_ms is not none %}<tr><th>latency p50 / p95</th><td class="num">{{ "%.0f"|format(s.latency_p50_ms) }} / {{ "%.0f"|format(s.latency_p95_ms) }} ms (RTF {{ "%.2f"|format(s.rtf_p50) }} / {{ "%.2f"|format(s.rtf_p95) }})</td></tr>{% endif %}
+<tr><th>word edits</th><td class="num">substitutions {% for k, v in b.substitutions.items() %}{{ k }}={{ v }} {% endfor %}· insertions {{ b.insertions }} · deletions {{ b.deletions }}</td></tr>
+</tbody></table></div>
+{% if m.hardware %}<p class="legend">Hardware: {{ m.hardware.cpu }}, {{ m.hardware.logical_cpus }} logical CPUs. Latency only compares between runs on the same hardware.</p>{% endif %}
+<p class="legend">WER after <code>voicebench.textnorm.normalise</code>, against the FLEURS raw transcription. Categories: the analyze rules that apply without intents (pipeline_error, wrong_language with auto-detect only, repetition_loop), then recognition_error for any other clip with WER above 0.</p>
+
+<h2 id="clips">Clips</h2>
+<p class="small">Sorted by {% if sort == "wer" %}WER, worst first · <a href="?sort=id#clips">sort by id</a>{% else %}id · <a href="?sort=wer#clips">sort by WER</a>{% endif %}. In the word diff:
+  <span class="w del">missed</span> reference words, <span class="w ins">added</span> words, <span class="w sub">substituted</span> words.</p>
+{% for c in clips %}{% set r = c.r %}
+<section class="case">
+  <header><b>{{ r.clip_id }}</b>
+    <span class="kv">WER <b>{{ "%.2f"|format(r.wer) if r.wer is not none else "-" }}</b></span>
+    <span class="kv">detected <b>{{ r.detected_language or "-" }}</b></span>
+    <span class="kv">script {{ r.transcript_script or "-" }}</span>
+    {% if c.category %}<span class="tag">{{ c.category }}</span>{% endif %}
+    {% if r.latency_ms is not none %}<span class="kv muted">{{ "%.0f"|format(r.latency_ms) }} ms</span>{% endif %}
+  </header>
+  {% if r.error %}<p class="status fail">{{ r.error }}</p>{% else %}
+  <div class="diff">
+    <span class="lbl">reference</span><span>{{ r.reference }}</span>
+    <span class="lbl">transcript</span><span>{{ r.transcript }}</span>
+    <span class="lbl">diff</span><span>{% for w in c.diff %}{% if w.op == "equal" %}{{ w.ref }} {% elif w.op == "del" %}<span class="w del">{{ w.ref }}</span> {% elif w.op == "ins" %}<span class="w ins">{{ w.hyp }}</span> {% else %}<span class="w sub" title="reference: {{ w.ref }}">{{ w.hyp }}</span> {% endif %}{% endfor %}</span>
+  </div>{% endif %}
+</section>
+{% endfor %}
+{% endblock %}

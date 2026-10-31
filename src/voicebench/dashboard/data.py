@@ -147,3 +147,29 @@ def run_overview(entry: RunEntry, store: RunStore) -> dict[str, Any]:
     except ValueError as e:  # includes pydantic ValidationError from a malformed scenarios file
         raise RunUnusable(str(e)) from None
     return {"summary": summary, "hash_ok": hash_ok, "scenarios": scenarios}
+
+
+class RealSpeechStore:
+    """Loads real-speech run files (``voicebench.realspeech.RealSpeechRun``) from their own directory.
+
+    They live apart from the synthetic runs (``results/realspeech/`` by
+    default) and are never mixed into the synthetic run list.
+    """
+
+    def __init__(self, directory: str | Path):
+        self.directory = Path(directory)
+        self.invalid: list[str] = []
+
+    def runs(self) -> list[Any]:
+        from voicebench.realspeech import load_realspeech_run
+
+        out, self.invalid = [], []
+        for path in sorted(self.directory.glob("*.json")) if self.directory.is_dir() else []:
+            try:
+                out.append(load_realspeech_run(path))
+            except (ValidationError, ValueError):
+                self.invalid.append(path.name)
+        return sorted(out, key=lambda r: r.created_at, reverse=True)
+
+    def get(self, run_id: str) -> Optional[Any]:
+        return next((r for r in self.runs() if r.run_id == run_id), None)

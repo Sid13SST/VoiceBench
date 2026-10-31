@@ -2,6 +2,7 @@
 {% import "macros.html" as ui %}
 {% block body %}
 <h1>Runs</h1>
+<h2>Synthetic benchmark (espeak-ng audio, 50 scenarios)</h2>
 <p class="muted">Every run file in <code>{{ results_dir }}</code>. Task success = right intent and every expected slot right.</p>
 {% if invalid %}<div class="banner">Skipped files that are not valid run files: {{ invalid | join(", ") }}</div>{% endif %}
 {% if unusable %}<div class="banner">Skipped run files whose scenarios cannot be loaded:
@@ -25,6 +26,31 @@
   </td>
   <td class="num">{{ row.overall.task_success }}/{{ row.overall.n }}</td>
   <td class="num">{{ "%.2f"|format(row.overall.corpus_wer) if row.overall.corpus_wer is not none else "-" }}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+
+<h2 id="realspeech">Real speech (external audio)</h2>
+<div class="banner"><b>Not part of the synthetic benchmark.</b> Human Hindi read speech from Google FLEURS (hi_in, test split, CC BY 4.0), recognition only: no intents or task success. Run files in <code>{{ real_dir }}</code>.</div>
+{% if real_invalid %}<div class="banner">Skipped files that are not valid real-speech run files: {{ real_invalid | join(", ") }}</div>{% endif %}
+{% if not real_rows %}
+<p>No real-speech runs yet. Create one with <code>make realspeech-fetch</code> then <code>make realspeech</code>.</p>
+{% else %}
+<div class="table-wrap"><table>
+<thead><tr><th>run</th><th>ASR</th><th>language</th><th>data</th><th class="num">clips</th><th class="num">corpus WER</th><th class="num">detected hi</th><th class="num">loops</th></tr></thead>
+<tbody>
+{% for row in real_rows %}{% set m = row.run %}{% set s = row.s %}
+<tr>
+  <td><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+  <td>{{ m.asr_model }}</td>
+  <td>{{ m.language_policy }}</td>
+  <td class="small"><span class="tag">real speech</span> {{ m.dataset.name }} {{ m.dataset.config }}/{{ m.dataset.split }}
+    {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}</td>
+  <td class="num">{{ s.n }}</td>
+  <td class="num">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }}</td>
+  <td class="num">{{ s.n_detected_hi }}/{{ s.n - s.errors }}</td>
+  <td class="num">{{ s.repetition_loops }}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>

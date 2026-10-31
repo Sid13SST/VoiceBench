@@ -17,12 +17,15 @@ from fastapi.templating import Jinja2Templates
 from voicebench.dashboard.data import (
     CONDITIONS,
     LANGUAGES,
+    RealSpeechStore,
     RunStore,
     RunUnusable,
     case_rows,
     matrix,
     run_overview,
 )
+from voicebench.dashboard.data import word_diff
+from voicebench.realspeech import clip_category, summarise_realspeech, word_error_breakdown
 from voicebench.understanding import BUILTIN
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -30,8 +33,10 @@ SCENARIO_ID_RE = re.compile(r"^v\d+-\d{3}$")
 
 
 def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "audio/v1",
-               repo_root: str | Path | None = None) -> FastAPI:
+               repo_root: str | Path | None = None, realspeech_dir: str | Path | None = None) -> FastAPI:
     store = RunStore(results_dir, repo_root)
+    # Real-speech runs (external human audio) have their own directory and pages.
+    real = RealSpeechStore(realspeech_dir if realspeech_dir is not None else Path(results_dir) / "realspeech")
     audio_dir = Path(audio_dir)
     app = FastAPI(title="VoiceBench", docs_url="/api/docs", redoc_url=None)
 
@@ -60,8 +65,38 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         return TEMPLATES.TemplateResponse(
             request,
             "index.html",
-            {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": str(store.results_dir)},
+            {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": str(store.results_dir),
+             "real_rows": [{"run": r, "s": summarise_realspeech(r)} for r in real.runs()],
+             "real_invalid": real.invalid, "real_dir": str(real.directory)},
         )
+
+    @app.get("/realspeech/{run_id}", response_class=HTMLResponse)
+    def realspeech_page(request: Request, run_id: str, sort: str = Query("wer")):
+        run = real.get(run_id)
+        if run is None:
+            raise HTTPException(404, f"no real-speech run {run_id!r}")
+        clips = list(run.results)
+        if sort == "wer":
+            clips.sort(key=lambda r: (r.wer is None, -(r.wer or 0)))
+        return TEMPLATES.TemplateResponse(
+            request, "realspeech.html",
+            {"m": run, "s": summarise_realspeech(run), "b": word_error_breakdown(run),
+             "clips": [{"r": r, "category": clip_category(r, run.language_policy),
+                        "diff": word_diff(r.reference, r.transcript or "") if r.error is None else []}
+                       for r in clips],
+             "sort": "wer" if sort == "wer" else "id"},
+        )
+
+    @app.get("/api/realspeech")
+    def api_realspeech():
+        return [summarise_realspeech(r) for r in real.runs()]
+
+    @app.get("/api/realspeech/{run_id}")
+    def api_realspeech_run(run_id: str):
+        run = real.get(run_id)
+        if run is None:
+            raise HTTPException(404, f"no real-speech run {run_id!r}")
+        return {"summary": summarise_realspeech(run), "run": run}
 
     @app.get("/runs/{run_id}", response_class=HTMLResponse)
     def run_page(

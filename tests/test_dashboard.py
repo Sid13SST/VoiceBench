@@ -234,3 +234,46 @@ def test_hostile_understander_name_is_escaped(fixture_repo, tmp_path):
         assert HOSTILE not in page and "<script" not in page
         assert escaped in page
     assert {r["run_id"]: r for r in client.get("/api/runs").json()}["hostile-run"]["understander"] == HOSTILE
+
+
+def _real_run(run_id="real-fixture", transcript="<b>मैं</b> घर", **extra):
+    from voicebench.realspeech import RealSpeechRun, score_clip
+
+    clip = {"id": "c1", "reference": "मैं घर जा रहा हूँ"}
+    return RealSpeechRun(
+        run_id=run_id, created_at=datetime(2026, 1, 2, tzinfo=timezone.utc), command="pytest",
+        manifest_file="m.json", manifest_sha256="0" * 64,
+        dataset={"name": "FLEURS", "hf_repo": "google/fleurs", "revision": "r" * 40, "config": "hi_in",
+                 "split": "test", "license": "CC-BY-4.0"},
+        asr_model="scripted", language_policy="auto",
+        results=[score_clip(clip, transcript, detected_language="ur", latency_ms=10.0, audio_duration_s=1.0)],
+        **extra,
+    )
+
+
+def test_real_speech_runs_are_listed_apart_and_labelled(fixture_repo, tmp_path):
+    client = fixture_repo[0]
+    real_dir = tmp_path / "results" / "realspeech"
+    real_dir.mkdir()
+    (real_dir / "real-fixture.json").write_text(_real_run().model_dump_json(), encoding="utf-8")
+    (real_dir / "junk.json").write_text("{}", encoding="utf-8")
+    index = client.get("/").text
+    synthetic, real = index.split('id="realspeech"')
+    assert "real-fixture" not in synthetic and "fixture-run" not in real
+    assert "/realspeech/real-fixture" in real and "real speech" in real and "junk.json" in real
+    assert "junk.json" not in synthetic  # a real-speech file never shows up as a broken synthetic run
+
+    page = client.get("/realspeech/real-fixture")
+    assert page.status_code == 200
+    assert "Real speech, external audio." in page.text and "wrong_language" in page.text
+    assert "&lt;b&gt;मैं&lt;/b&gt;" in page.text and "<b>मैं</b>" not in page.text  # transcript escaped
+    assert client.get("/runs/real-fixture").status_code == 404
+    assert client.get("/realspeech/fixture-run").status_code == 404
+    api = client.get("/api/realspeech").json()
+    assert [a["run_id"] for a in api] == ["real-fixture"] and api[0]["kind"] == "real-speech-external"
+    assert client.get("/api/realspeech/real-fixture").json()["summary"]["detected_languages"] == {"ur": 1}
+    assert "real-fixture" not in [r["run_id"] for r in client.get("/api/runs").json()]
+
+
+def test_index_without_real_speech_runs(fixture_repo):
+    assert "No real-speech runs yet" in fixture_repo[0].get("/").text
