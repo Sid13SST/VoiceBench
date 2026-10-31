@@ -25,6 +25,8 @@ lists them in a separate section.
 | `20261031T202136Z-faster-whisper-small-realspeech-fleurs-hi_in-hint.json` | `make realspeech POLICY=hint` (see note) |
 | `…-auto-rescored-9336d77.json` | `voicebench realspeech rescore results/realspeech/20261031T200244Z-…-auto.json` |
 | `…-hint-rescored-9336d77.json` | `voicebench realspeech rescore results/realspeech/20261031T202136Z-…-hint.json` |
+| `…-auto-rescored-08a104e.json` | same command, at `08a104e` (day 9 number parser) |
+| `…-hint-rescored-08a104e.json` | same command, at `08a104e` (day 9 number parser) |
 
 - The two runs were started as
   `voicebench realspeech run --model small --language-policy {auto,hint} -v --command "make realspeech POLICY={auto,hint}"`:
@@ -41,6 +43,10 @@ lists them in a separate section.
   unchanged and add the per-clip reference numbers and how many the
   matcher's parser reads back. Read the figures from them:
   `voicebench realspeech report <rescored file>`.
+- The rescores at `08a104e` differ from those at `9336d77` only in
+  `numbers_recovered` (two clips per run), after the day 9 number-parser
+  change. Add `--split data/realspeech/fleurs_hi_in_test_150_split.json`
+  to `realspeech report` for the dev / held-out counts.
 - Cost 0 USD, as for the benchmark.
 
 ## Day 5 runs (current synthetic baseline)
