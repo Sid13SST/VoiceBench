@@ -165,6 +165,76 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
     return m
 
 
+# ------------------------------------------------------------------- split
+
+DEFAULT_SPLIT = "data/realspeech/fleurs_hi_in_test_150_split.json"
+SPLIT_SEED = 20261101
+SPLIT_NAMES = ("dev", "heldout")
+
+
+def split_clips(manifest: dict[str, Any], seed: int = SPLIT_SEED) -> dict[str, list[str]]:
+    """Split the manifest's clips into a dev half and a held-out half.
+
+    The unit is the FLEURS sentence, not the clip: a sentence read by two
+    speakers would otherwise put the same reference text in both halves.
+    Sentence ids are sorted, shuffled with ``random.Random(seed)``, and
+    sentences go to dev until it holds half the clips (rounded down); the
+    rest are held out. Clip ids come back sorted.
+    """
+    by_sentence: dict[int, list[str]] = {}
+    for c in manifest["clips"]:
+        by_sentence.setdefault(c["sentence_id"], []).append(c["id"])
+    order = sorted(by_sentence)
+    random.Random(seed).shuffle(order)
+    target = len(manifest["clips"]) // 2
+    dev: list[str] = []
+    held: list[str] = []
+    for sid in order:
+        (dev if len(dev) + len(by_sentence[sid]) <= target else held).extend(by_sentence[sid])
+    return {"dev": sorted(dev), "heldout": sorted(held)}
+
+
+def build_split(manifest: dict[str, Any], manifest_file: str, seed: int, command: str) -> dict[str, Any]:
+    halves = split_clips(manifest, seed)
+    return {
+        "kind": "real-speech-split",
+        "manifest_file": manifest_file,
+        "manifest_sha256": file_sha256(manifest_file),
+        "seed": seed,
+        "method": "sentence ids sorted, random.Random(seed).shuffle, sentences fill dev up to "
+                  "half the clips; the rest are held out",
+        "command": command,
+        "note": "Matcher and number-parser changes are developed on dev only; heldout is "
+                "scored only to report the result.",
+        **halves,
+    }
+
+
+def numbers_by_half(run: "RealSpeechRun", split: dict[str, list[str]]) -> dict[str, dict[str, int]]:
+    """Reference numbers and numbers recovered, per half of the split, from the run's per-clip fields."""
+    half_of = {cid: h for h in SPLIT_NAMES for cid in split[h]}
+    out = {h: {"clips_with_numbers": 0, "reference_numbers": 0, "numbers_recovered": 0} for h in SPLIT_NAMES}
+    for r in run.results:
+        if r.clip_id not in half_of:
+            raise ValueError(f"clip {r.clip_id} is in neither half of the split")
+        if r.error is not None or not r.reference_numbers or r.numbers_recovered is None:
+            continue
+        h = out[half_of[r.clip_id]]
+        h["clips_with_numbers"] += 1
+        h["reference_numbers"] += len(r.reference_numbers)
+        h["numbers_recovered"] += r.numbers_recovered
+    return out
+
+
+def load_split(path: str | Path) -> dict[str, list[str]]:
+    s = json.loads(Path(path).read_text(encoding="utf-8"))
+    if s.get("kind") != "real-speech-split":
+        raise ValueError(f"{path}: not a real-speech split (kind={s.get('kind')!r})")
+    if set(s["dev"]) & set(s["heldout"]):
+        raise ValueError(f"{path}: a clip is in both halves")
+    return {k: list(s[k]) for k in SPLIT_NAMES}
+
+
 # ------------------------------------------------------------------- fetch
 
 

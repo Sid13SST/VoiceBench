@@ -396,6 +396,31 @@ def _cmd_realspeech_report(args: argparse.Namespace) -> int:
     if run is None:
         return 1
     print(rs.format_realspeech(rs.summarise_realspeech(run), rs.word_error_breakdown(run)))
+    if args.split:
+        try:
+            halves = rs.numbers_by_half(run, rs.load_split(args.split))
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"{args.split}: {exc}", file=sys.stderr)
+            return 1
+        print(f"\nnumbers recovered by half ({args.split})")
+        for name, h in halves.items():
+            print(f"  {name:<8} {h['numbers_recovered']} of {h['reference_numbers']} reference numbers "
+                  f"({h['clips_with_numbers']} clips)")
+    return 0
+
+
+def _cmd_realspeech_split(args: argparse.Namespace) -> int:
+    import json
+
+    from voicebench import realspeech as rs
+
+    manifest = rs.load_manifest(args.manifest)
+    command = f"voicebench realspeech split --seed {args.seed} --out {args.out}"
+    split = rs.build_split(manifest, args.manifest, args.seed, command)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(split, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(f"wrote {out}: dev {len(split['dev'])} clips, heldout {len(split['heldout'])} clips, seed {args.seed}")
     return 0
 
 
@@ -510,7 +535,15 @@ def main(argv: list[str] | None = None) -> int:
 
     p_rp = rsub.add_parser("report", help="print WER, language, loop, latency and word-edit breakdown of a real-speech run")
     p_rp.add_argument("run")
+    p_rp.add_argument("--split", default=None, metavar="FILE",
+                      help=f"also print numbers recovered per half of a dev/held-out split (e.g. {_rs.DEFAULT_SPLIT})")
     p_rp.set_defaults(func=_cmd_realspeech_report)
+
+    p_sp = rsub.add_parser("split", help="(re)build the committed dev/held-out split of the manifest's clips")
+    p_sp.add_argument("--manifest", default=_rs.DEFAULT_MANIFEST)
+    p_sp.add_argument("--seed", type=int, default=_rs.SPLIT_SEED)
+    p_sp.add_argument("--out", default=_rs.DEFAULT_SPLIT)
+    p_sp.set_defaults(func=_cmd_realspeech_split)
 
     p_dash = sub.add_parser("dashboard", help="serve the results dashboard")
     p_dash.add_argument("--results", default="results")

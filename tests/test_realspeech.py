@@ -255,3 +255,43 @@ def test_compare_isolates_the_misdetected_clips(lane, tmp_path, capsys):
     other = auto.model_copy(update={"manifest_sha256": "f" * 64})
     with pytest.raises(ValueError, match="different manifests"):
         rs.compare_realspeech(other, hint)
+
+
+def test_split_keeps_each_sentence_in_one_half():
+    clips = [{"id": f"c{i}", "sentence_id": i // 2 if i < 6 else i} for i in range(12)]
+    halves = rs.split_clips({"clips": clips}, seed=7)
+    assert halves == rs.split_clips({"clips": list(reversed(clips))}, seed=7)  # order-independent
+    assert sorted(halves["dev"] + halves["heldout"]) == sorted(c["id"] for c in clips)
+    assert len(halves["dev"]) == 6
+    sid = {c["id"]: c["sentence_id"] for c in clips}
+    assert not {sid[c] for c in halves["dev"]} & {sid[c] for c in halves["heldout"]}
+
+
+def test_committed_split_matches_the_manifest():
+    path = ROOT / rs.DEFAULT_SPLIT
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    manifest = rs.load_manifest(ROOT / rs.DEFAULT_MANIFEST)
+    assert raw["manifest_sha256"] == hashlib.sha256((ROOT / rs.DEFAULT_MANIFEST).read_bytes()).hexdigest()
+    assert rs.load_split(path) == rs.split_clips(manifest, raw["seed"])
+    assert (len(raw["dev"]), len(raw["heldout"])) == (75, 75)
+
+
+def test_numbers_by_half_and_report_split(tmp_path, capsys):
+    clips = [{"id": "x", "reference": "1966 से लगभग 400 बाघ"}, {"id": "y", "reference": "53 साल के"}]
+    results = [rs.score_clip(clips[0], "सुंदरबन लगभग चार सौ बाघ"), rs.score_clip(clips[1], "53 साल के")]
+    run = rs.RealSpeechRun(run_id="t", created_at="2026-10-31T00:00:00Z", command="pytest", manifest_file="m",
+                           manifest_sha256="0" * 64, dataset={"name": "FLEURS", "config": "hi_in", "split": "test",
+                                                              "license": "CC-BY-4.0"},
+                           asr_model="fixture", language_policy="hint", results=results)
+    split = {"dev": ["x"], "heldout": ["y"]}
+    assert rs.numbers_by_half(run, split) == {
+        "dev": {"clips_with_numbers": 1, "reference_numbers": 2, "numbers_recovered": 1},
+        "heldout": {"clips_with_numbers": 1, "reference_numbers": 1, "numbers_recovered": 1},
+    }
+    with pytest.raises(ValueError):
+        rs.numbers_by_half(run, {"dev": ["x"], "heldout": []})
+    run_path = save(run, tmp_path)
+    split_path = tmp_path / "split.json"
+    split_path.write_text(json.dumps({"kind": "real-speech-split", **split}), encoding="utf-8")
+    assert main(["realspeech", "report", str(run_path), "--split", str(split_path)]) == 0
+    assert "heldout  1 of 1 reference numbers (1 clips)" in capsys.readouterr().out
