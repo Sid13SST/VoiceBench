@@ -16,6 +16,7 @@
 <tr><th>clips</th><td class="num">{{ s.n }} ({{ s.errors }} pipeline errors, {{ s.reference_words }} reference words)</td></tr>
 <tr><th>corpus WER</th><td class="num">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }}</td></tr>
 <tr><th>corpus WER, clips detected as hi</th><td class="num">{{ "%.3f"|format(s.corpus_wer_detected_hi) if s.corpus_wer_detected_hi is not none else "-" }} ({{ s.n_detected_hi }} clips)</td></tr>
+<tr><th>corpus WER, nukta / chandrabindu folded (diagnostic)</th><td class="num">{{ "%.3f"|format(s.corpus_wer_spelling_folded) if s.corpus_wer_spelling_folded is not none else "-" }}</td></tr>
 <tr><th>per-clip WER mean / median</th><td class="num">{{ "%.3f"|format(s.clip_wer_mean) if s.clip_wer_mean is not none else "-" }} / {{ "%.3f"|format(s.clip_wer_median) if s.clip_wer_median is not none else "-" }}</td></tr>
 <tr><th>clips with WER 0 / WER &gt; 1</th><td class="num">{{ s.clips_wer_zero }} / {{ s.clips_wer_over_1 }}</td></tr>
 <tr><th>detected language</th><td class="num">{% for k, v in s.detected_languages.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>

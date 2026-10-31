@@ -37,7 +37,7 @@ from voicebench.loader import file_sha256
 from voicebench.metrics import corpus_wer, percentile, wer
 from voicebench.nlu.numbers import find_numbers
 from voicebench.runner import git_commit, hardware_info
-from voicebench.textnorm import script_profile, tokens
+from voicebench.textnorm import fold_spelling_variants, normalise, script_profile, tokens
 
 KIND = "real-speech-external"
 
@@ -435,6 +435,11 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
         # Clips auto-detect labelled Hindi only; with the hint this equals corpus_wer.
         "corpus_wer_detected_hi": corpus_wer((r.reference, r.transcript or "") for r in on_hindi) if on_hindi else None,
         "n_detected_hi": len(on_hindi),
+        # Diagnostic only, not the headline: corpus WER when nukta and
+        # chandrabindu spellings are folded on both sides (textnorm.fold_spelling_variants).
+        "corpus_wer_spelling_folded": corpus_wer(
+            (fold_spelling_variants(normalise(r.reference)), fold_spelling_variants(normalise(r.transcript or "")))
+            for r in ok) if ok else None,
         "clip_wer_mean": sum(wers) / len(wers) if wers else None,
         "clip_wer_median": percentile(wers, 50),
         "clips_wer_zero": sum(1 for w in wers if w == 0),
@@ -534,6 +539,7 @@ def format_realspeech(summary: dict[str, Any], breakdown: Optional[dict[str, Any
         "",
         f"corpus WER                 {f2(summary['corpus_wer'])}",
         f"corpus WER, detected hi    {f2(summary['corpus_wer_detected_hi'])}  ({summary['n_detected_hi']} clips)",
+        f"corpus WER, nukta/chandrabindu folded (diagnostic) {f2(summary['corpus_wer_spelling_folded'])}",
         f"per-clip WER mean / median {f2(summary['clip_wer_mean'])} / {f2(summary['clip_wer_median'])}",
         f"clips with WER 0 / WER > 1 {summary['clips_wer_zero']} / {summary['clips_wer_over_1']}",
         f"detected language          " + ", ".join(f"{k}={v}" for k, v in summary["detected_languages"].items()),

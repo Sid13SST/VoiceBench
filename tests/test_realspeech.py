@@ -156,6 +156,7 @@ def test_run_policies_and_summary(lane):
     assert s["categories"] == {"wrong_language": 1, "pipeline_error": 1}
     assert s["corpus_wer"] == pytest.approx(3 / 8)  # 0 of 5 + 3 of 3 reference words
     assert s["corpus_wer_detected_hi"] == 0 and s["n_detected_hi"] == 1
+    assert s["corpus_wer_spelling_folded"] == s["corpus_wer"]
     assert "REAL SPEECH, external audio" in rs.format_realspeech(s)
 
     asr = Scripted(texts)
@@ -181,6 +182,9 @@ def test_word_error_breakdown_kinds(lane):
     b = rs.word_error_breakdown(run)
     assert b["substitutions"] == {"other": 1, "spelling_variant": 1, "script": 1, "digits": 1}
     assert ("हूँ", "हूं", 1) in b["top_pairs"]["spelling_variant"]
+    s = rs.summarise_realspeech(run)
+    # "हूँ" -> "हूं" is an error in the headline WER only: 4 vs 3 errors over 9 reference words
+    assert (s["corpus_wer"], s["corpus_wer_spelling_folded"]) == (pytest.approx(4 / 9), pytest.approx(3 / 9))
 
 
 def test_cli_report_and_rescore(lane, tmp_path, capsys):
