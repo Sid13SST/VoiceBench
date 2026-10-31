@@ -210,6 +210,10 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     if c["understanders_differ"]:
         print(f"understanders differ: A={c['understander_a']} B={c['understander_b']} - "
               "this compares two systems, not a reproducibility check")
+    if c.get("external_api_a") or c.get("external_api_b"):
+        print(f"external API run: A={c['external_api_a'] or 'local'} B={c['external_api_b'] or 'local'} - "
+              "different systems on a remote service; not a reproducibility check, and not to be "
+              "averaged or ranked with local runs")
     print(f"transcripts differ: {len(c['transcripts_differ'])} {' '.join(c['transcripts_differ'])}")
     print(f"task outcome differs: {len(c['task_outcome_differs'])} "
           + " ".join(f"{i}({x}->{y})" for i, x, y in c["task_outcome_differs"]))
@@ -544,6 +548,11 @@ def main(argv: list[str] | None = None) -> int:
     p_sp.add_argument("--seed", type=int, default=_rs.SPLIT_SEED)
     p_sp.add_argument("--out", default=_rs.DEFAULT_SPLIT)
     p_sp.set_defaults(func=_cmd_realspeech_split)
+
+    # External-API lane (Gnani Prisma / Timbre), kept apart from the local benchmark.
+    from voicebench.gnani.cli import add_parser as _add_gnani_parser
+
+    _add_gnani_parser(sub)
 
     p_dash = sub.add_parser("dashboard", help="serve the results dashboard")
     p_dash.add_argument("--results", default="results")
