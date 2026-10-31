@@ -10,9 +10,20 @@ Two readings are produced for each maximal run of number tokens:
 - anything else is read as a quantity -> "fifteen hundred" = 1500,
   "दो हज़ार" = 2000.
 
-Hindi number words for 1-100 are irregular; only the ones listed below are
-covered. That limit is real and shows up in results if a model writes, say,
-"सत्तासी".
+Hindi number words for 1-99 are irregular (each of 21-99 is its own word,
+not "twenty one"), so all of them are listed in their standard spelling,
+plus the spelling variants dictionaries give. A year is said as hundreds:
+"उन्नीस सौ तिरसठ" = 19 x 100 + 63 = 1963. Two written forms of the
+hundreds that Whisper produces on real speech are also read:
+
+- the unit and "सौ" written as one word, "चारसौ" or with a virama on the
+  unit, "चार्सौ" (= चार सौ, 400);
+- "सो" for "सौ" (the vowel written short). "सो" is also a common word
+  ("so", "sleep"), so it counts only right after a number, "चार सो" or
+  "चार्सो", never alone.
+
+Misspelled number words ("सथटर" for सत्तर) are not guessed at: a fuzzy
+match would also read "साथ" (with) as "साठ" (60).
 """
 
 from __future__ import annotations
@@ -36,6 +47,26 @@ UNITS: dict[str, int] = {
     "पंद्रह": 15, "पन्द्रह": 15, "सोलह": 16, "सत्रह": 17, "अठारह": 18,
     "उन्नीस": 19, "बीस": 20, "पच्चीस": 25, "तीस": 30, "चालीस": 40,
     "पचास": 50, "साठ": 60, "सत्तर": 70, "अस्सी": 80, "नब्बे": 90,
+    # Hindi 21-99 (the 1-20 and round tens above are not repeated)
+    "इक्कीस": 21, "बाईस": 22, "तेईस": 23, "चौबीस": 24, "छब्बीस": 26,
+    "सत्ताईस": 27, "अट्ठाईस": 28, "उनतीस": 29,
+    "इकतीस": 31, "बत्तीस": 32, "तैंतीस": 33, "चौंतीस": 34, "पैंतीस": 35,
+    "छत्तीस": 36, "सैंतीस": 37, "अड़तीस": 38, "उनतालीस": 39,
+    "इकतालीस": 41, "बयालीस": 42, "तैंतालीस": 43, "चौवालीस": 44, "चवालीस": 44,
+    "पैंतालीस": 45, "छियालीस": 46, "सैंतालीस": 47, "अड़तालीस": 48, "उनचास": 49,
+    "इक्यावन": 51, "बावन": 52, "तिरपन": 53, "तिरेपन": 53, "चौवन": 54, "चौव्वन": 54,
+    "पचपन": 55, "छप्पन": 56, "सत्तावन": 57, "अट्ठावन": 58, "उनसठ": 59,
+    "इकसठ": 61, "बासठ": 62, "तिरसठ": 63, "चौंसठ": 64, "पैंसठ": 65,
+    "छियासठ": 66, "सड़सठ": 67, "सरसठ": 67, "अड़सठ": 68, "उनहत्तर": 69,
+    "इकहत्तर": 71, "बहत्तर": 72, "तिहत्तर": 73, "चौहत्तर": 74, "पचहत्तर": 75,
+    "छिहत्तर": 76, "सतहत्तर": 77, "अठहत्तर": 78, "उन्यासी": 79, "उनासी": 79,
+    "इक्यासी": 81, "बयासी": 82, "तिरासी": 83, "चौरासी": 84, "पचासी": 85,
+    "छियासी": 86, "सत्तासी": 87, "अट्ठासी": 88, "नवासी": 89,
+    # 91-99 end in -नबे or -नवे; both spellings are standard
+    "इक्यानबे": 91, "बानबे": 92, "तिरानबे": 93, "चौरानबे": 94, "पचानबे": 95,
+    "छियानबे": 96, "सत्तानबे": 97, "अट्ठानबे": 98, "निन्यानबे": 99,
+    "इक्यानवे": 91, "बानवे": 92, "तिरानवे": 93, "चौरानवे": 94, "पचानवे": 95,
+    "छियानवे": 96, "सत्तानवे": 97, "अट्ठानवे": 98, "निन्यानवे": 99,
     # Hindi, romanised (as an ASR model may write it)
     "shunya": 0, "ek": 1, "do": 2, "teen": 3, "char": 4, "chaar": 4,
     "paanch": 5, "panch": 5, "chhe": 6, "chhah": 6, "saat": 7, "aath": 8,
@@ -53,6 +84,11 @@ _HUNDRED = {_fold(w) for w in HUNDRED}
 _THOUSAND = {_fold(w) for w in THOUSAND}
 _LAKH = {_fold(w) for w in LAKH}
 _MULTIPLIERS = _HUNDRED | _THOUSAND | _LAKH
+# "सो" for "सौ": a hundred only right after another number token.
+_HUNDRED_AFTER_NUMBER = {"सो"}
+# Endings of a unit and its hundred written as one word: "चारसौ", "चार्सो".
+_FUSED_HUNDRED_ENDINGS = ("सौ", "सो")
+_VIRAMA = "\u094d"
 
 _DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 # Only ASCII and Devanagari digits. str.isdigit() also accepts "²", "①" or
@@ -76,24 +112,57 @@ class NumberSpan:
     digit_sequence: bool  # read digit by digit (an id), not as a quantity
 
 
+def _fused_hundred(tok: str) -> int | None:
+    """Value of a folded token that is a unit 1-99 and its hundred as one word ("चार्सो" -> 400)."""
+    for ending in _FUSED_HUNDRED_ENDINGS:
+        if tok.endswith(ending) and len(tok) > len(ending):
+            stem = tok[: -len(ending)]
+            # "चार्" + "सो": the virama only marks the unit's last consonant
+            # as having no vowel before the next word's consonant.
+            stem = stem[:-1] if stem.endswith(_VIRAMA) else stem
+            n = _UNITS.get(stem)
+            if n is not None and 1 <= n <= 99 and not stem.isascii():
+                return n * 100
+    return None
+
+
+def _unit_value(tok: str) -> int | None:
+    """Value of a folded word that adds to the running number: a unit, or a fused hundred."""
+    n = _UNITS.get(tok)
+    return n if n is not None else _fused_hundred(tok)
+
+
 def _token_kind(tok: str) -> str | None:
     if _DIGITS_RE.fullmatch(tok):
         return "digits"
     tok = _fold(tok)
-    if tok in _UNITS:
+    if _unit_value(tok) is not None:
         return "unit"
     if tok in _MULTIPLIERS:
         return "mult"
     return None
 
 
+def _single_digit_word(tok: str) -> bool:
+    n = None if _DIGITS_RE.fullmatch(tok) else _unit_value(_fold(tok))
+    return n is not None and n <= 9
+
+
+def _continues_run(tokens: list[str], j: int, i: int) -> bool:
+    """tokens[j] extends the number run that started at i."""
+    if _token_kind(tokens[j]) is not None:
+        return True
+    # "चार सो": "सो" is a hundred only after a unit or digits
+    return j > i and _fold(tokens[j]) in _HUNDRED_AFTER_NUMBER and _token_kind(tokens[j - 1]) in ("unit", "digits")
+
+
 def _quantity(tokens: list[str]) -> int:
     total, current = 0, 0
     for tok in tokens:
         tok = _fold(tok)
-        if tok in _UNITS:
-            current += _UNITS[tok]
-        elif tok in _HUNDRED:
+        if _unit_value(tok) is not None:
+            current += _unit_value(tok)
+        elif tok in _HUNDRED or tok in _HUNDRED_AFTER_NUMBER:
             current = (current or 1) * 100
         elif tok in _THOUSAND:
             total += (current or 1) * 1000
@@ -124,7 +193,7 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
             i += 1
             continue
         j = i
-        while j < len(tokens) and _token_kind(tokens[j]) is not None:
+        while j < len(tokens) and _continues_run(tokens, j, i):
             # a digit string ends a run ("4821 5590" are two ids), except that
             # groups of one or two digits join up: Whisper writes "7310" read
             # digit by digit as "7-3-1-0" or "7, 3, 1, 0", which normalise to
@@ -153,7 +222,7 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
             spans.append(NumberSpan(i, j, run[0].translate(_DEV_DIGITS), digit_sequence=False))
         elif all(_token_kind(t) == "digits" for t in run):
             spans.append(NumberSpan(i, j, "".join(run).translate(_DEV_DIGITS), digit_sequence=True))
-        elif len(run) >= 2 and all(_UNITS.get(_fold(t), 99) <= 9 for t in run):
+        elif len(run) >= 2 and all(_single_digit_word(t) for t in run):
             spans.append(NumberSpan(i, j, "".join(str(_UNITS[_fold(t)]) for t in run), digit_sequence=True))
         elif all(_fold(t) in _MULTIPLIERS for t in run):
             pass  # a bare "hundred" or "हज़ार" is not a number on its own

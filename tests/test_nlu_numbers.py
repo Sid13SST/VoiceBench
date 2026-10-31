@@ -114,3 +114,68 @@ def test_english_do_before_digits_gives_the_right_quantity():
     from voicebench.nlu.matcher import match
 
     assert match("can you do 3 plates of masala dosa", "food").slots == {"item": "masala dosa", "quantity": "3"}
+
+
+def test_every_hindi_number_word_from_one_to_ninety_nine_is_listed():
+    from voicebench.nlu.numbers import UNITS
+
+    devanagari = {v for k, v in UNITS.items() if not k.isascii()}
+    assert set(range(100)) <= devanagari
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        # Reference numbers of FLEURS dev clips (1963, 1889, 31, 53) as a
+        # correct transcript would say them: none of these parsed before.
+        ("उन्नीस सौ तिरसठ में बाँध बनने के बाद", [("1963", False)]),
+        ("अठारह सौ नवासी में यह बंदरगाह", [("1889", False)]),
+        ("एक हज़ार नौ सौ तिरसठ में", [("1963", False)]),
+        ("पचास किलोमीटर इकतीस मील दूर", [("50", False), ("31", False)]),
+        ("तिरपन साल के", [("53", False)]),
+        ("निन्यानबे और निन्यानवे", [("99", False), ("99", False)]),  # -नबे and -नवे
+        ("अड़तालीस", [("48", False)]),
+        ("अडतालीस", [("48", False)]),  # nukta dropped
+    ],
+)
+def test_hindi_two_digit_words_and_years(text, expected):
+    assert values(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        # FLEURS dev clip 834255654721637854, both policies: 400 written as "चार्सो"
+        ("अब लग्बक चार्सो रोयल, बंगाल ताइगर्स", [("400", False)]),
+        ("चारसौ", [("400", False)]),
+        ("चार्सौ", [("400", False)]),
+        ("उन्नीससौ तिरसठ", [("1963", False)]),
+        ("पांच सो रुपये", [("500", False)]),  # "सो" for "सौ" after a number
+        ("दो सो", [("200", False)]),
+        ("दो हज़ार पांच सो", [("2500", False)]),
+        # "सो" alone is the word "so" / "sleep", not a hundred
+        ("सो साल से पुराने", []),
+        ("वो सो गया", []),
+        ("सो हम चलें", []),
+        ("हज़ार सो", []),  # a bare multiplier, then the word
+    ],
+)
+def test_hundreds_written_jointly_or_with_short_vowel(text, expected):
+    assert values(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Misspellings Whisper wrote on FLEURS dev clips. They are not guessed:
+        # a fuzzy match would also read "साथ" (with) as "साठ" (60).
+        "सथटर से जाड़ा",  # सत्तर, 70
+        "ती साजार चीतल",  # तीस हज़ार, 30000
+        "तप्पन्साल के",  # तिरपन साल, 53
+        "पान्सो कांगलो",  # पाँच सौ, 500
+        "ब्रिटेन के साथ जहाजों",
+        "परसो आना",  # day after tomorrow, nasal dropped; "पर" is not a number
+    ],
+)
+def test_misspelled_number_words_are_not_guessed(text):
+    assert values(text) == []
