@@ -14,8 +14,11 @@ down by language and condition, and a dashboard shows every failing case.
 
 > **v0.1.0.** Every number in this README comes from a run file committed
 > under [`results/`](results/README.md) and can be reproduced with the
-> commands below. All audio is **synthetic** (espeak-ng). Please read
-> [Limitations](#limitations) before drawing conclusions about real callers.
+> commands below. All benchmark audio is **synthetic** (espeak-ng). A
+> separate [real-speech validation lane](#real-speech-check-whisper-small-on-human-hindi-fleurs)
+> runs the same Whisper setup on 150 clips of human Hindi read speech
+> (Google FLEURS). Please read [Limitations](#limitations) before drawing
+> conclusions about real callers.
 
 ## Architecture
 
@@ -96,9 +99,62 @@ Full write-up: **[`docs/failure_analysis.md`](docs/failure_analysis.md)**
   are human agents." The only intent keyword found is "human", from the
   caller's words; the prompt contributes neither "agent" nor "human", and
   "agents" does not match the keyword "agent".
-- **The cause of the Hindi failures can't be pinned down here**: these
-  results can't separate Whisper `small`'s Hindi from espeak-ng's synthetic
-  Hindi. Natural Hindi speech would be needed.
+- **Much of the synthetic Hindi failure is the synthetic audio.** On human
+  Hindi speech (next section) the same model detects Hindi on 131 of 150
+  clips (synthetic: 0 of 17) and reaches corpus WER 0.63 / 0.59 (synthetic:
+  3.02 / 1.12). The two sets differ in text as well as voice, so this
+  bounds the TTS effect rather than measuring it exactly.
+
+## Real-speech check: Whisper `small` on human Hindi (FLEURS)
+
+A validation lane separate from the benchmark: 150 clips of the Google
+FLEURS Hindi test split (`hi_in`, CC BY 4.0), chosen with seed 20261031.
+The clip list and reference transcripts are committed in
+[`data/realspeech/`](data/realspeech/fleurs_hi_in_test_150.json); the audio
+is downloaded at run time and never committed ([DATA_NOTES](DATA_NOTES.md)).
+Same model, revision and decoding settings as the benchmark (CPU, int8,
+beam 5, temperature 0). There are no intents here, so it measures
+recognition only. Run files are in [`results/realspeech/`](results/README.md#real-speech-runs)
+and shown in their own section of the dashboard.
+
+| FLEURS hi_in, 150 clips, 3708 words | auto-detect | language hint (`hi`) |
+|---|---|---|
+| corpus WER | **0.631** | **0.593** |
+| per-clip WER mean / median | 0.634 / 0.579 | 0.594 / 0.552 |
+| clips with WER 0 / WER > 1 | 0 / 12 | 0 / 4 |
+| detected language | hi 131, ur 15, ne 2, jw 1, id 1 | hi 150 (given) |
+| repetition loops | 8 | 11 |
+| reference numbers the matcher reads back | 6 of 34 | 7 of 34 |
+| latency p50 / p95 | 7563 / 13760 ms | 6408 / 12572 ms |
+| real-time factor p50 / p95 | 0.70 / 1.17 | 0.61 / 1.10 |
+| wall time (1753 s of audio) | 1239 s | 1118 s |
+
+Synthetic Hindi, for comparison (17 clips, same model): WER 3.02 auto /
+1.12 hint, Hindi detected 0 of 17 times. Same machine type as the day 5
+runs (Xeon @ 2.10 GHz, 4 vCPU). Reproduce with
+`make realspeech-fetch && make realspeech && make realspeech POLICY=hint`
+(about 20 minutes per policy on 4 CPUs), then
+`voicebench realspeech report RUN` and `voicebench realspeech compare AUTO HINT`.
+
+- **The hint changes only the misdetected clips.** For the 131 clips
+  auto-detect labels Hindi, the two runs' transcripts are identical. The 19
+  others (15 written in Urdu script, 2 labelled Nepali, 2 in Latin script)
+  have WER 1.08 with auto-detect and 0.74 with the hint. Hindi and Urdu
+  are one spoken language in two scripts, so `ur` is the main confusion.
+- **Most errors are recognition errors inside Whisper `small`**: no clip
+  is transcribed perfectly. Aspiration loss ("गंभीर" → "गंबीर", "था" →
+  "ता") and short-for-long vowels account for 119 to 130 substitutions per
+  run; numbers come out as misspelled Hindi number words ("उन्नीस सौ
+  तिरसठ" for 1963 is written "उन्निस्स्सो तर्सट"), so only 6 or 7 of 34
+  reference numbers can be read back. Repetition loops still occur (8 and
+  11 clips) and are slow (median latency 12.3 / 11.8 s, against 7.3 /
+  6.3 s for other clips).
+- **One matcher fix came out of it**: Whisper drops the nukta from an
+  otherwise correct word far more often than it keeps it (27 vs 5 times
+  with auto-detect, 35 vs 7 with the hint), so the matcher now treats
+  nukta and chandrabindu spellings as the same word. That doesn't change
+  WER (the headline WER stays strict; folded, it is 0.622 / 0.582) or any
+  synthetic result. Details: [`docs/failure_analysis.md`](docs/failure_analysis.md#real-speech-fleurs-hindi).
 
 ## Quick start
 
@@ -108,13 +164,16 @@ Requires Python 3.10+ and, to regenerate audio, `espeak-ng`
 ```bash
 make setup          # .venv with the package, dev and ASR extras
 make setup-locked   # same, with the exact versions used for the committed runs (Python 3.11+)
-make test           # with espeak-ng installed: 290 pass, 1 skipped (real-model test); without it 285 pass, 6 skipped (5 need espeak-ng); downloads no model
+make test           # with espeak-ng installed: 336 pass, 1 skipped (real-model test); without it 331 pass, 6 skipped (5 need espeak-ng); downloads no model
 make validate       # check scenarios/v1.jsonl and print its makeup
 make audio-check    # regenerate the audio in a temp dir and compare with audio/v1
 
 make bench                 # full run, Whisper small, language auto-detect -> results/
 make bench POLICY=hint     # pass the caller's language to Whisper
 make run                   # dashboard at http://127.0.0.1:8000
+
+make realspeech-fetch      # download FLEURS hi_in test (~250 MB) and extract the 150 manifest clips into .cache/
+make realspeech            # real-speech lane, auto-detect -> results/realspeech/  (POLICY=hint for the hint)
 ```
 
 `make bench` downloads the Whisper weights (~480 MB) from Hugging Face on
@@ -132,6 +191,7 @@ Other commands (`.venv/bin/voicebench …`):
 | `run --asr oracle` | pipeline check with reference text as the transcript (not an ASR result) |
 | `transcribe WAV…` | transcribe individual clips |
 | `synth SCENARIOS --out DIR [--check]` | generate audio, or verify committed audio |
+| `realspeech fetch` / `run` / `report RUN` / `compare A B` / `rescore RUN` | the real-speech lane: download clips, transcribe, WER / language / loop / latency / number report, auto vs hint comparison, re-score saved transcripts |
 
 To score your own intent and slot extraction instead of the built-in
 matcher, `run --understander package.module:function` imports a function
@@ -143,10 +203,19 @@ HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 ## Limitations
 
 **The audio**
-- **All speech is synthetic espeak-ng output**: one formant-synthesised
-  (robotic-sounding) voice per language, with no accents, ages, genders or
-  speaking styles. Nobody has listened to the clips to judge how
-  intelligible the Hindi is.
+- **All benchmark speech is synthetic espeak-ng output**: one
+  formant-synthesised (robotic-sounding) voice per language, with no
+  accents, ages, genders or speaking styles. Nobody has listened to the
+  clips to judge how intelligible the Hindi is.
+- **Real-speech validation exists, for Hindi only.** On 150 FLEURS clips of
+  human Hindi, Whisper `small` gives corpus WER 0.631 (auto-detect, Hindi
+  detected on 131/150) and 0.593 (language hint), against 3.02 and 1.12 on
+  the synthetic Hindi. That is read Wikipedia text, recorded wideband: not
+  phone calls, not conversation, not code-switched. It checks recognition
+  only (no intents), and its text differs from the scenarios, so it does
+  not give task-success numbers for real callers. No openly licensed
+  Hindi-English source could be verified, so code-switched results remain
+  synthetic only ([why](DATA_NOTES.md#hindi-english-hinglish-not-added)).
 - **Not telephone audio.** Clips are clean 16 kHz wideband. Real calls are
   usually 8 kHz narrowband with codec artefacts and packet loss; none of
   that is simulated.
@@ -167,8 +236,10 @@ HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
   agent would cope with new callers. The matcher is also told the domain,
   and it breaks intent ties by list order (this decided one English
   failure, `v1-041`).
-- **WER doesn't normalise numbers or script**: "5000" vs "five thousand" and
-  English words written in Devanagari count as errors.
+- **WER doesn't normalise numbers, script or spelling variants**: "5000" vs
+  "five thousand", English words written in Devanagari, and "बड़ी" vs
+  "बडी" count as errors. For the last one the real-speech report also
+  gives a folded WER as a diagnostic.
 - **Transcripts vary across CPUs.** Re-runs on one machine are identical.
   On another CPU, 22 to 33 of 50 transcripts changed (no pass/fail changed),
   so Hindi WER isn't stable across machines
@@ -190,8 +261,10 @@ HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
   including the day 4 re-score after a matcher fix and the same-machine
   re-run.
 - [`DATA_NOTES.md`](DATA_NOTES.md): source and licence of every piece of
-  data. Scenario text is hand-written, all audio is synthetic, and there
-  are no recordings of real people and no scraped or real phone data.
+  data. Scenario text is hand-written and the benchmark audio is
+  synthetic. The real-speech lane uses FLEURS Hindi (CC BY 4.0, with the
+  attribution it requires); its audio is downloaded at run time, not
+  committed. No scraped or real phone data.
 - [`docs/progress.md`](docs/progress.md): day-by-day log, including what
   didn't work: blocked model downloads, a matcher bug found in real
   results, transcripts differing across CPUs, and one retracted claim.
@@ -199,5 +272,7 @@ HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 ## Licence
 
 MIT, see [LICENSE](LICENSE). Whisper weights (MIT) are downloaded at run
-time and not redistributed. espeak-ng (GPL-3.0) is used as an external
+time and not redistributed. The FLEURS clip list and transcripts in
+`data/realspeech/` are CC BY 4.0 (attribution in [DATA_NOTES](DATA_NOTES.md)); FLEURS
+audio is downloaded at run time and not redistributed. espeak-ng (GPL-3.0) is used as an external
 program; the audio it generated is released here under MIT.

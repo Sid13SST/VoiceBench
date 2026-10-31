@@ -1,6 +1,7 @@
 # Failure analysis: Whisper `small` on VoiceBench v1
 
-Written from the day 5 run files only:
+Sections 1 to 4 are written from the day 5 run files only (the real-speech
+section at the end uses its own run files):
 
 - `results/20261018T132344Z-faster-whisper-small-auto.json` (language auto-detect)
 - `results/20261018T132652Z-faster-whisper-small-hint.json` (caller's language passed to Whisper)
@@ -107,3 +108,152 @@ The same three English scenarios fail in both runs (14/17 pass):
    held-out phrasings, since this lexicon was written alongside v1.
 4. More clips per condition before reading anything into the noise or
    interruption numbers.
+
+## Real speech (FLEURS Hindi)
+
+Added on day 8. Whisper `small`, same revision and decoding settings as
+above, on 150 clips of human Hindi read speech from the Google FLEURS
+`hi_in` test split (CC BY 4.0, seed 20261031; see `DATA_NOTES.md`). Run
+files:
+
+- `results/realspeech/20261031T200244Z-faster-whisper-small-realspeech-fleurs-hi_in-auto.json` (auto-detect)
+- `results/realspeech/20261031T202136Z-faster-whisper-small-realspeech-fleurs-hi_in-hint.json` (language hint `hi`)
+- the same two `…-rescored-9336d77.json`: identical transcripts, with the
+  per-clip number fields added. The figures below come from these.
+
+Every figure is printed by `voicebench realspeech report <rescored file>`
+or `voicebench realspeech compare <auto> <hint>`. There are no intents in
+FLEURS, so the categories that need them (agent prompt leak, no intent,
+wrong intent, slot error) don't apply. The ones that do are used in the
+same order (pipeline error → wrong language → repetition loop), and any
+other clip with WER above 0 is `recognition_error`.
+
+| | auto-detect | language hint |
+|---|---|---|
+| corpus WER (3708 reference words) | 0.631 | 0.593 |
+| wrong language detected | 19 | n/a |
+| repetition loop | 8 | 11 |
+| recognition error | 123 | 139 |
+| pipeline error | 0 | 0 |
+| clips with WER 0 | 0 | 0 |
+
+**Against the synthetic baseline.** Synthetic Hindi (17 clips) has corpus
+WER 3.02 (auto) and 1.12 (hint), and auto-detect labelled none of the 17
+as Hindi. On human Hindi the same model labels 131 of 150 as Hindi and
+WER is 0.63 / 0.59. So the synthetic numbers overstate how badly Whisper
+`small` handles Hindi, and language ID especially. The text also differs
+(Wikipedia sentences of about 25 words vs short caller turns), so the gap
+is not a pure TTS-vs-human measurement.
+
+### 1. Language ID: Urdu is the main confusion
+
+With auto-detect, 19 clips were labelled as another language: `ur` 15,
+`ne` 2, `jw` 1, `id` 1. The Urdu ones are written in Arabic script, so
+every word counts as an error even when the words are right (Hindi and
+Urdu are one spoken language). The `jw` and `id` ones are in Latin script,
+romanised Hindi or garble.
+
+`voicebench realspeech compare` shows that for the other 131 clips the
+auto and hint transcripts are **identical**. The whole auto-vs-hint
+difference is these 19 clips: their WER is 1.08 with auto-detect and 0.74
+with the hint. That is Whisper's language ID, not something this repo can
+fix; giving the language (the hint policy) is the remedy.
+
+### 2. Recognition errors dominate, and they are Whisper's
+
+No clip is perfect. Of the edits, substitutions are most (1912 auto, 1711
+hint), then deletions (249 / 269) and insertions (177 / 217). The report
+names a few mechanical kinds of substitution:
+
+| substitution kind | auto | hint | example |
+|---|---|---|---|
+| aspiration lost or added | 77 | 84 | "गंभीर" → "गंबीर", "था" → "ता" |
+| short / long vowel | 42 | 46 | "पानी" → "पानि" |
+| nukta / chandrabindu only | 29 | 37 | "बड़ी" → "बडी", "वीज़ा" → "वीजा" |
+| a digit on either side | 43 | 39 | "1889" → "उन्नासी" |
+| Devanagari vs Latin | 45 | 6 | the Latin-script auto transcripts |
+| anything else | 1676 | 1499 | |
+
+The first two are recognition errors and are counted as such. A further
+32 / 35 words (the report's `split_or_join`) are a word of one side
+written as two adjacent words of the other ("इस में" vs "इसमें"). These are also left as errors: which spelling is right is a
+judgement call, and folding them would hide differences rather than fix
+anything.
+
+### 3. Numbers: Whisper writes them as misspelled words
+
+34 numbers are written in digits in the references (28 clips; ordinals
+such as "11वीं", units such as "35mm", and times are left out). The report
+checks whether the matcher's number parser (`nlu/numbers.py`) finds each
+value in the transcript. It finds **6 of 34** (auto) and **7 of 34**
+(hint).
+
+Every miss was looked at. Whisper wrote years and amounts as Hindi number
+words that are misspelled or run together: "उन्निस्स्सो तर्सट" for 1963
+(उन्नीस सौ तिरसठ), "अटारा सो उन्नासी" for 1889, "चार्सो" for 400,
+"10 अजार" for 10,000, "चालिच हजार" for 40,000. Or the clip was in Urdu
+script or a loop. No transcript contains Devanagari digits (the report's
+"transcripts with Devanagari digits" is 0 in both runs), and no missed
+number was a correctly spelled Hindi number word that the parser lacks.
+So none of the suggested number fixes (Devanagari numerals, more Hindi
+number words) is backed by these runs, and none was made. What a correct
+transcript would need is a better recogniser, or a parser that guesses at
+misspellings, which this repo does not attempt.
+
+### 4. Nukta and chandrabindu: one matcher fix
+
+When Whisper got a word with a nukta otherwise right, it **dropped the
+nukta 27 times and kept it 5 times** (auto; hint 35 vs 7). Chandrabindu
+was written as anusvara: the 29 / 37 "nukta / chandrabindu only"
+substitutions include both. The matcher's lexicon handled this with hand-added variants
+(हज़ार/हजार, पाँच/पांच, कहाँ/कहां), but not everywhere: "पिज्जा" did not
+match the menu item "पिज़्ज़ा".
+
+Fix (`textnorm.fold_spelling_variants`, used by `nlu/matcher.py` and
+`nlu/numbers.py`): the matcher drops the nukta and writes chandrabindu as
+anusvara on both the transcript and every lexicon form. Regression tests:
+`test_nukta_and_chandrabindu_spellings_match` (the "पिज्जा" case failed
+before the change) and `test_folded_number_words_keep_their_value`.
+
+Before and after:
+
+- **Real-speech lane**: unchanged. WER keeps both marks (`normalise` is
+  not changed), and numbers recovered stays 6 / 34 and 7 / 34, because
+  every number word the parser knows was already listed with and without
+  the marks. Corpus WER with the two marks folded, reported as a
+  diagnostic, is 0.622 (auto) and 0.582 (hint); about 0.01 of WER is
+  these spellings.
+- **Synthetic benchmark**: rescoring every committed run with the change
+  alters no intent, slot or task outcome (checked by
+  `test_default_rescore_of_every_committed_run_is_unchanged`).
+- So the fix is backed by what Whisper does with real Hindi, but its
+  measured effect is on matcher keywords, not on any number in these
+  runs.
+
+### 5. Repetition loops
+
+8 clips loop with auto-detect and 11 with the hint; the 8 are among the
+11. The existing rule catches all of them, at word level ("ॐ ॐ ॐ …",
+"आपने आपने …") and at character level ("च्च्च्…", "ँँँ…"). Loop clips
+have a median latency of 12.3 s (auto) and 11.8 s (hint), against 7.3 s
+and 6.3 s for other clips. The real clips are longer than the synthetic
+ones (11.7 s on average against 4.0 s), so latencies are higher overall.
+
+### 6. Other things found
+
+- Three transcripts per run contain U+FFFD, a broken character, each time
+  as the transcript's last character: decoding stopped in the middle of a
+  multi-byte character (Whisper's tokens are bytes). `normalise` turns it into a space, so it doesn't add
+  a word; it is a Whisper / faster-whisper artefact and is left as is.
+- A real-speech run takes about 20 minutes, so a commit made during the
+  run could be recorded as its code. `run_realspeech` now reads the commit
+  before decoding. The two runs here were made at `6e3ddb7`, before that
+  change, with no commit during the runs; `6e3ddb7` is what they record.
+
+### What this does not show
+
+- Phone audio, conversational or accented speech, noise, or
+  interruptions: FLEURS is clean read speech.
+- Hindi-English code-switching: no openly licensed real source could be
+  verified (`DATA_NOTES.md`).
+- Task success for real callers: there are no intents or slots here.

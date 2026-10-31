@@ -358,3 +358,75 @@ real-model smoke test.
   `e8fab2c`. Checked afterwards: a clone of the tag reports version 0.1.0,
   passes `make setup` and `make test` (189 passed, 1 skipped), regenerates
   the audio byte-identically, and reproduces the README numbers.
+
+## Day 8 (2026-10-31)
+
+**Goal**: validate the Whisper pipeline on real, openly licensed human
+Hindi speech, so the Hindi numbers no longer rest on espeak-ng audio
+alone, and fix what that exposes. The 50-scenario synthetic benchmark is
+unchanged.
+
+**Done**
+- **Data**: Google FLEURS `hi_in`, test split, from the Hugging Face Hub at
+  revision `70bb2e84` (public, not gated). 150 of its 418 clips chosen with
+  seed 20261031. The manifest (clip ids, reference transcripts, sha256 per
+  WAV, seed, source-file hashes) is committed at
+  `data/realspeech/fleurs_hi_in_test_150.json`; the audio is downloaded at
+  run time into `.cache/` (git-ignored). Licence, attribution and the
+  selection are in `DATA_NOTES.md`.
+- **Lane**: `voicebench realspeech manifest|fetch|run|rescore|report|compare`,
+  `make realspeech-fetch` and `make realspeech [POLICY=hint]`. Same model,
+  revision and decoding as `make bench`. Corpus and per-clip WER,
+  auto-detect language distribution, repetition loops, latency, and how many
+  reference numbers the matcher's number parser reads back. Run files go to
+  `results/realspeech/` and have their own section and page in the
+  dashboard, apart from the synthetic runs.
+- **Runs** (code at `6e3ddb7`, Xeon @ 2.10 GHz, 4 vCPU):
+  - auto-detect: corpus WER **0.631**; Hindi detected on 131/150 (ur 15,
+    ne 2, jw 1, id 1); 8 loops; p50 7563 ms, p95 13760 ms; 1239 s wall.
+  - language hint: corpus WER **0.593**; 11 loops; p50 6408 ms, p95
+    12572 ms; 1118 s wall.
+  - Synthetic Hindi for comparison: 3.02 / 1.12, with 0/17 detected as
+    Hindi.
+- **Fix**: the matcher and the number parser now fold nukta and
+  chandrabindu spellings (`textnorm.fold_spelling_variants`). Evidence:
+  Whisper dropped the nukta of an otherwise correct word 27 times and kept
+  it 5 (auto; hint 35 vs 7), and the lexicon lacked a bare "पिज्जा".
+  Regression tests added. No lane metric moved (WER keeps both marks;
+  numbers recovered stays 6/34 and 7/34), and no synthetic outcome
+  changed.
+- Smaller lane fixes found along the way: the run records its commit before
+  decoding (a 20-minute run could otherwise record a commit made during
+  it), and the report names aspiration and vowel-length substitutions and
+  counts Devanagari digits and U+FFFD.
+- Tests: 336 pass, 1 skipped (the real-model smoke test, which also passes
+  with `VOICEBENCH_ASR_MODEL=small`); without espeak-ng 331 pass, 6 skipped.
+
+**What the data said no to**
+- **Devanagari numerals**: Whisper wrote none in either run, so no fix.
+- **More Hindi number words**: every missed number was a misspelled or
+  run-together number word ("उन्निस्स्सो तर्सट" for 1963, "चार्सो" for
+  400) or Urdu script, never a correct word missing from the lexicon. No
+  fix; it is a recognition problem.
+- **Urdu-script output** (15 auto clips): Whisper's language ID. The
+  hint removes it; transliterating Urdu to Devanagari to score it would
+  hide a real failure, so it isn't done.
+
+**Not done**
+- **Hindi-English real speech**: skipped. The MUCS 2021 copies on the
+  Hugging Face Hub are third-party re-uploads that disagree on the licence
+  (CC BY 4.0 vs CC BY-SA 4.0), and the original release could not be
+  checked from this environment.
+
+**Corrections and surprises**
+- The brief described FLEURS as CC-BY-SA-4.0; the dataset card at the
+  pinned revision says CC BY 4.0, which is what `DATA_NOTES.md` records.
+- With the hint, the 131 clips auto-detect already labelled Hindi get
+  exactly the same transcripts. The whole auto-vs-hint gap is the 19
+  misdetected clips.
+- A test that rescores every committed run loaded files recursively and
+  broke on the first real-speech run file; it now skips
+  `results/realspeech/`. While reordering commits so that fix came first,
+  the commit the first rescores named was rewritten; the rescores were
+  regenerated at the new commit (`9336d77`) so the recorded commit exists
+  on the branch.
