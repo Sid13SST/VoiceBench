@@ -158,6 +158,7 @@ def test_run_policies_and_summary(lane):
     assert s["corpus_wer_detected_hi"] == 0 and s["n_detected_hi"] == 1
     assert s["corpus_wer_spelling_folded"] == s["corpus_wer"]
     assert (s["latency_p50_loop_ms"], s["latency_p50_no_loop_ms"]) == (None, 500.0)
+    assert (s["transcripts_with_devanagari_digits"], s["transcripts_with_replacement_char"]) == (0, 0)
     assert "REAL SPEECH, external audio" in rs.format_realspeech(s)
 
     asr = Scripted(texts)
@@ -195,6 +196,7 @@ def test_word_error_breakdown_kinds(lane):
     assert ("हूँ", "हूं", 1) in b["top_pairs"]["spelling_variant"]
     assert (b["nukta_kept"], b["nukta_dropped"]) == (0, 0)  # "बाज़ार" -> "bazaar" is a script error
     s = rs.summarise_realspeech(run)
+    assert s["transcripts_with_devanagari_digits"] == 1  # "२"
     # "हूँ" -> "हूं" is an error in the headline WER only: 4 vs 3 errors over 9 reference words
     assert (s["corpus_wer"], s["corpus_wer_spelling_folded"]) == (pytest.approx(4 / 9), pytest.approx(3 / 9))
 

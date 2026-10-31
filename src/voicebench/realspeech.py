@@ -447,6 +447,9 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
         "detected_languages": dict(Counter(r.detected_language for r in ok).most_common()),
         "transcript_scripts": dict(Counter(r.transcript_script for r in ok).most_common()),
         "repetition_loops": sum(1 for r in ok if r.repetition_loop),
+        "transcripts_with_devanagari_digits": sum(1 for r in ok if re.search("[०-९]", r.transcript or "")),
+        # U+FFFD: Whisper stopped in the middle of a multi-byte character.
+        "transcripts_with_replacement_char": sum(1 for r in ok if "\ufffd" in (r.transcript or "")),
         "clips_with_numbers": len(with_numbers),
         "reference_numbers": sum(len(r.reference_numbers) for r in with_numbers),
         "numbers_recovered": sum(r.numbers_recovered for r in with_numbers) if with_numbers else None,
@@ -596,6 +599,8 @@ def format_realspeech(summary: dict[str, Any], breakdown: Optional[dict[str, Any
         f"detected language          " + ", ".join(f"{k}={v}" for k, v in summary["detected_languages"].items()),
         f"transcript script          " + ", ".join(f"{k}={v}" for k, v in summary["transcript_scripts"].items()),
         f"repetition loops           {summary['repetition_loops']}",
+        f"transcripts with Devanagari digits / U+FFFD  {summary['transcripts_with_devanagari_digits']} / "
+        f"{summary['transcripts_with_replacement_char']}",
         f"numbers recovered          "
         + ("-" if summary["numbers_recovered"] is None else
            f"{summary['numbers_recovered']} of {summary['reference_numbers']} reference numbers "
