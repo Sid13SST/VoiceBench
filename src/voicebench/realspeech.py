@@ -492,7 +492,11 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
     wers = [r.wer for r in ok if r.wer is not None]
     on_hindi = [r for r in ok if r.detected_language == HINT_LANGUAGE]
     with_numbers = [r for r in ok if r.reference_numbers and r.numbers_recovered is not None]
+    from voicebench.gnani import external_provider
+
+    extra = {"external_api": external_provider(run.asr_config)} if external_provider(run.asr_config) else {}
     return {
+        **extra,
         "run_id": run.run_id,
         "kind": run.kind,
         "dataset": run.dataset,
@@ -660,6 +664,8 @@ def format_realspeech(summary: dict[str, Any], breakdown: Optional[dict[str, Any
         f"{ds['license']}]",
         f"asr={summary['asr_model']}  language policy={summary['language_policy']}  "
         f"clips={summary['n']}  errors={summary['errors']}  reference words={summary['reference_words']}",
+        *([f"EXTERNAL API RUN ({summary['external_api']}): Prisma on a subset of the clips; "
+           "not comparable with the local Whisper real-speech runs"] if summary.get("external_api") else []),
         "",
         f"corpus WER                 {f2(summary['corpus_wer'])}",
         f"corpus WER, detected hi    {f2(summary['corpus_wer_detected_hi'])}  ({summary['n_detected_hi']} clips)",

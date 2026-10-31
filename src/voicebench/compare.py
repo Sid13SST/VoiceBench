@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from voicebench.gnani import external_provider
 from voicebench.schema import RunManifest
 from voicebench.understanding import BUILTIN
 
@@ -34,4 +35,7 @@ def compare_runs(a: RunManifest, b: RunManifest) -> dict[str, Any]:
         "understander_a": a.understander or BUILTIN,
         "understander_b": b.understander or BUILTIN,
         "understanders_differ": (a.understander or BUILTIN) != (b.understander or BUILTIN),
+        # Provider name for a run made through an external API (e.g. the Gnani lane), else None.
+        "external_api_a": external_provider(a.asr_config),
+        "external_api_b": external_provider(b.asr_config),
     }

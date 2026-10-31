@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable
 
+from voicebench.gnani import COMPARABILITY, external_provider
 from voicebench.metrics import corpus_wer, percentile
 from voicebench.schema import RunManifest, Scenario, ScenarioResult
 
@@ -56,7 +57,11 @@ def summarise(run: RunManifest, scenarios: list[Scenario]) -> dict[str, Any]:
             buckets[key(s)].append((s, r))
         return {k: _group_stats(v) for k, v in sorted(buckets.items())}
 
+    extra = {}
+    if external_provider(run.asr_config):
+        extra["external_api"] = external_provider(run.asr_config)
     return {
+        **extra,
         "run_id": run.run_id,
         "source": run.source.value,
         "asr_model": run.asr_model,
@@ -77,7 +82,10 @@ def format_table(summary: dict[str, Any]) -> str:
     head = f"run {summary['run_id']}  [{summary['source']}]  asr={summary['asr_model']}"
     if summary.get("understander", "builtin") != "builtin":
         head += f"  understander={summary['understander']} (not the built-in matcher)"
-    lines = [head, ""]
+    lines = [head]
+    if summary.get("external_api"):
+        lines.append(f"EXTERNAL API RUN ({summary['external_api']}): {COMPARABILITY}")
+    lines.append("")
     header = f"{'group':<22}{'n':>4}{'task ok':>10}{'intent':>9}{'WER':>8}{'errors':>8}{'p50 ms':>9}{'p95 ms':>9}{'RTF p50':>9}"
     for title in ("overall", "by_language", "by_condition", "by_language_condition"):
         groups = {"all": summary["overall"]} if title == "overall" else summary[title]
