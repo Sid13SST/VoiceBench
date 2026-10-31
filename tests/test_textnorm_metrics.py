@@ -86,3 +86,12 @@ def test_latency_stats_nearest_rank_and_rtf():
     assert s["latency_p50_ms"] == 10_000 and s["latency_p95_ms"] == 19_000
     assert s["rtf_p50"] == 5.0 and s["rtf_p95"] == 9.5
     assert latency_stats([])["latency_p50_ms"] is None
+
+
+def test_fold_spelling_variants_is_for_matching_not_wer():
+    from voicebench.textnorm import fold_spelling_variants
+
+    # NFC splits nukta letters into base + U+093C, so both input forms fold alike.
+    assert fold_spelling_variants(normalise("बड़ी ज़्यादा हूँ")) == "बडी ज्यादा हूं"
+    assert fold_spelling_variants(normalise("ड़")) == "ड"
+    assert wer("बड़ी", "बडी") == 1.0  # WER still counts the variant as an error

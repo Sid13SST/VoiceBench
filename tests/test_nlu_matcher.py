@@ -201,3 +201,30 @@ def test_account_card_order_numbers_are_not_amounts(text, amount):
 def test_only_an_account_number_gives_no_amount():
     p = match("transfer to rahul from account 1234", "banking")
     assert "amount" not in p.slots and p.slots["recipient"] == "rahul"
+
+
+# On FLEURS Hindi (results/realspeech/), Whisper small wrote an otherwise
+# correct nukta word without the nukta 27 times and with it 5 times
+# ("बड़ी" -> "बडी", "ज़्यादा" -> "ज्यादा"). The lexicon spells "पिज़्ज़ा"
+# with a nukta and had no bare variant, so "पिज्जा" was not a menu item.
+# The other cases already matched through hand-added variants or a prefix
+# ("धोखा*"); they check that folding keeps them working.
+@pytest.mark.parametrize("text, domain, intent, slots", [
+    ("मुझे दो मार्गरीटा पिज्जा चाहिए", "food", "order_food", {"item": "margherita pizza", "quantity": "2"}),
+    ("मेरे खाते से धोखाधडी हुई है", "banking", "report_fraud", {}),
+    # and the other way round: a nukta Whisper adds where the lexicon has none
+    ("मेरा फ़ोन चार्ज नहीं हो रहा", "support", "report_issue", {"device": "phone", "issue": "not charging"}),
+    # chandrabindu / anusvara: "कहां" is listed, "कहाँ" folds to it
+    ("मेरा ऑर्डर कहाँ है", "food", "track_order", {}),
+])
+def test_nukta_and_chandrabindu_spellings_match(text, domain, intent, slots):
+    p = match(text, domain)
+    assert p.intent == intent
+    assert {k: p.slots.get(k) for k in slots} == slots
+
+
+def test_folded_number_words_keep_their_value():
+    from voicebench.nlu.numbers import find_numbers
+
+    for text in ("दस हज़ार", "दस हजार", "पाँच सौ", "पांच सौ"):
+        assert [n.value for n in find_numbers(tokens(text))] == [{"द": "10000", "प": "500"}[text[0]]]

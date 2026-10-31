@@ -33,6 +33,24 @@ def normalise(text: str) -> str:
     return " ".join("".join(out).split())
 
 
+_NUKTA = "\u093c"
+_CANDRABINDU, _ANUSVARA = "\u0901", "\u0902"
+
+
+def fold_spelling_variants(text: str) -> str:
+    """Drop the nukta and write chandrabindu as anusvara: "बड़ी" -> "बडी", "हूँ" -> "हूं".
+
+    For matching words, not for WER (``normalise`` keeps both marks, so WER
+    still counts these as errors). On real Hindi speech (FLEURS hi_in),
+    Whisper small writes the nukta of an otherwise correct word far less
+    often than it drops it, and uses anusvara where references use
+    chandrabindu, so a keyword list has to accept both spellings. Folding
+    both sides does that without listing every variant by hand. Expects
+    NFC text, where a nukta letter such as ज़ is ज + U+093C.
+    """
+    return text.replace(_NUKTA, "").replace(_CANDRABINDU, _ANUSVARA)
+
+
 def tokens(text: str) -> list[str]:
     return normalise(text).split()
 

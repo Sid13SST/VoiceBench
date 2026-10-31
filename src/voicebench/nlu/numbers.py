@@ -20,6 +20,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from voicebench.textnorm import fold_spelling_variants as _fold
+
 UNITS: dict[str, int] = {
     # English
     "zero": 0, "oh": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -44,6 +46,13 @@ HUNDRED = {"hundred", "सौ", "sau"}
 THOUSAND = {"thousand", "हज़ार", "हजार", "hazaar", "hazar", "hajar"}
 LAKH = {"lakh", "lac", "लाख"}
 MULTIPLIERS = HUNDRED | THOUSAND | LAKH
+# Lookups use folded spellings, so "हजार" and "हज़ार", "पांच" and "पाँच"
+# are the same word whichever one a transcript uses.
+_UNITS = {_fold(k): v for k, v in UNITS.items()}
+_HUNDRED = {_fold(w) for w in HUNDRED}
+_THOUSAND = {_fold(w) for w in THOUSAND}
+_LAKH = {_fold(w) for w in LAKH}
+_MULTIPLIERS = _HUNDRED | _THOUSAND | _LAKH
 
 _DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 # Only ASCII and Devanagari digits. str.isdigit() also accepts "²", "①" or
@@ -70,9 +79,10 @@ class NumberSpan:
 def _token_kind(tok: str) -> str | None:
     if _DIGITS_RE.fullmatch(tok):
         return "digits"
-    if tok in UNITS:
+    tok = _fold(tok)
+    if tok in _UNITS:
         return "unit"
-    if tok in MULTIPLIERS:
+    if tok in _MULTIPLIERS:
         return "mult"
     return None
 
@@ -80,14 +90,15 @@ def _token_kind(tok: str) -> str | None:
 def _quantity(tokens: list[str]) -> int:
     total, current = 0, 0
     for tok in tokens:
-        if tok in UNITS:
-            current += UNITS[tok]
-        elif tok in HUNDRED:
+        tok = _fold(tok)
+        if tok in _UNITS:
+            current += _UNITS[tok]
+        elif tok in _HUNDRED:
             current = (current or 1) * 100
-        elif tok in THOUSAND:
+        elif tok in _THOUSAND:
             total += (current or 1) * 1000
             current = 0
-        elif tok in LAKH:
+        elif tok in _LAKH:
             total += (current or 1) * 100_000
             current = 0
         else:  # digit string inside a run, e.g. "5 हज़ार"
@@ -142,9 +153,9 @@ def find_numbers(tokens: list[str]) -> list[NumberSpan]:
             spans.append(NumberSpan(i, j, run[0].translate(_DEV_DIGITS), digit_sequence=False))
         elif all(_token_kind(t) == "digits" for t in run):
             spans.append(NumberSpan(i, j, "".join(run).translate(_DEV_DIGITS), digit_sequence=True))
-        elif len(run) >= 2 and all(t in UNITS and UNITS[t] <= 9 for t in run):
-            spans.append(NumberSpan(i, j, "".join(str(UNITS[t]) for t in run), digit_sequence=True))
-        elif all(t in MULTIPLIERS for t in run):
+        elif len(run) >= 2 and all(_UNITS.get(_fold(t), 99) <= 9 for t in run):
+            spans.append(NumberSpan(i, j, "".join(str(_UNITS[_fold(t)]) for t in run), digit_sequence=True))
+        elif all(_fold(t) in _MULTIPLIERS for t in run):
             pass  # a bare "hundred" or "हज़ार" is not a number on its own
         else:
             spans.append(NumberSpan(i, j, str(_quantity(run)), digit_sequence=False))

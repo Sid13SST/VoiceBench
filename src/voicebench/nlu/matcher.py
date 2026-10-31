@@ -32,7 +32,16 @@ from fractions import Fraction
 from voicebench.nlu import lexicon as lx
 from voicebench.nlu.numbers import HUNDRED, LAKH, THOUSAND, NumberSpan, find_numbers
 from voicebench.schema import INTENTS, Domain
-from voicebench.textnorm import normalise
+from voicebench.textnorm import fold_spelling_variants, normalise
+
+
+def _key(text: str) -> str:
+    """Normalised text with nukta / chandrabindu spelling variants folded.
+
+    Transcripts and every lexicon form go through this, so "पिज़्ज़ा" in the
+    lexicon matches Whisper's "पिज्जा" (see textnorm.fold_spelling_variants).
+    """
+    return fold_spelling_variants(normalise(text))
 
 # Digits as numbers.py reads them: ASCII and Devanagari only (\d is any Unicode digit).
 _D = "0-9०-९"
@@ -45,7 +54,10 @@ _DECIMAL_RE = re.compile(rf"(?<![{_D}.])([{_D}]+)\.([{_D}]+)(?![.{_D}])(?:(\s+)(
 # "5k" -> "5000". ASCII digits only; not "5km", and not the fraction of
 # "1.5k" (a decimal without a scale word stays unparsed, per _decimal).
 _K_AMOUNT_RE = re.compile(r"(?<![0-9.])([0-9]+)k(?![a-z0-9])")
-_SCALE = {**{w: 100 for w in HUNDRED}, **{w: 1000 for w in THOUSAND}, **{w: 100_000 for w in LAKH}}
+_SCALE = {_key(w): v for ws, v in ((HUNDRED, 100), (THOUSAND, 1000), (LAKH, 100_000)) for w in ws}
+_SOURCE_BEFORE = {_key(w) for w in lx.SOURCE_MARKERS_BEFORE}
+_SOURCE_AFTER = {_key(w) for w in lx.SOURCE_MARKERS_AFTER}
+_ID_MARKERS = {_key(w) for w in lx.ID_NUMBER_MARKERS}
 
 
 @dataclass(frozen=True)
@@ -63,7 +75,7 @@ class Prediction:
 
 
 def _phrase_tokens(gazetteer: dict[str, list[str]]) -> list[tuple[list[str], str]]:
-    forms = [(normalise(f).split(), canon) for canon, fs in gazetteer.items() for f in fs]
+    forms = [(_key(f).split(), canon) for canon, fs in gazetteer.items() for f in fs]
     return sorted(forms, key=lambda x: -len(x[0]))  # longest first
 
 
@@ -84,7 +96,7 @@ def find_mentions(tokens: list[str], gazetteer: dict[str, list[str]]) -> list[Me
 
 
 def _has_phrase(tokens: list[str], phrase: str) -> bool:
-    words = normalise(phrase.rstrip("*")).split()
+    words = _key(phrase.rstrip("*")).split()
     prefix = phrase.endswith("*")
     n = len(words)
     for i in range(len(tokens) - n + 1):
@@ -102,7 +114,7 @@ def _first_phrase(text: str, phrases: dict[str, list[str]]) -> str | None:
     padded = f" {text} "
     for canon, forms in phrases.items():
         for form in forms:
-            pos = padded.find(f" {normalise(form)} ")
+            pos = padded.find(f" {_key(form)} ")
             if pos >= 0 and (best is None or pos < best[0]):
                 best = (pos, canon)
     return best[1] if best else None
@@ -135,7 +147,7 @@ def _cities(tokens: list[str]) -> tuple[str | None, str | None]:
     for m in mentions:
         before = tokens[m.start - 1] if m.start > 0 else None
         after = tokens[m.end] if m.end < len(tokens) else None
-        if before in lx.SOURCE_MARKERS_BEFORE or after in lx.SOURCE_MARKERS_AFTER:
+        if before in _SOURCE_BEFORE or after in _SOURCE_AFTER:
             # no break: the last marked city wins, like the other slots, so a
             # self-correction ("from pune, sorry, from delhi") keeps delhi
             source = m.value
@@ -167,11 +179,11 @@ _ID_WINDOW = 3
 
 def _is_id_number(n: NumberSpan, tokens: list[str], numbers: list[NumberSpan]) -> bool:
     """n is introduced by an account/card/order/PNR/number word, so it is not an amount."""
-    if n.start > 0 and tokens[n.start - 1] in lx.ID_NUMBER_MARKERS:
+    if n.start > 0 and tokens[n.start - 1] in _ID_MARKERS:
         return True
     for words in lx.ID_NUMBER_ENDING:
         k = n.start - len(words)
-        if k > 0 and tuple(tokens[k:n.start]) == words and tokens[k - 1] in lx.ID_NUMBER_MARKERS:
+        if k > 0 and tuple(tokens[k:n.start]) == words and tokens[k - 1] in _ID_MARKERS:
             return True
     if not (n.digit_sequence and len(n.value) >= _ID_MIN_DIGITS):
         return False
@@ -179,7 +191,7 @@ def _is_id_number(n: NumberSpan, tokens: list[str], numbers: list[NumberSpan]) -
     for k in range(n.start - 1, max(n.start - 1 - _ID_WINDOW, -1), -1):
         if k in in_number:
             return False
-        if tokens[k] in lx.ID_NUMBER_MARKERS:
+        if tokens[k] in _ID_MARKERS:
             return True
     return False
 
@@ -240,7 +252,7 @@ def _decimal(m: re.Match) -> str:
     """
     whole, frac, space, word = m.groups()
     value = int(whole) + Fraction(int(frac), 10 ** len(frac))
-    scale = _SCALE.get(normalise(word)) if word else None
+    scale = _SCALE.get(_key(word)) if word else None
     if scale and (value * scale).denominator == 1:
         return str(int(value * scale))
     return f" {space}{word}" if word else " "
@@ -260,7 +272,7 @@ def match(transcript: str, domain: Domain | str) -> Prediction:
     text = _DIGIT_GROUP_RE.sub("", transcript)
     text = _HYPHEN_GROUPS_RE.sub(_hyphen_groups, text)
     text = _K_AMOUNT_RE.sub(_k_amount, text)
-    text = normalise(_DECIMAL_RE.sub(_decimal, text))
+    text = _key(_DECIMAL_RE.sub(_decimal, text))
     tokens = text.split()
     intent, scores = classify(tokens, domain, text)
     slots = extract_slots(intent, domain, tokens, text) if intent else {}
