@@ -8,7 +8,42 @@ written by `voicebench run` and never edited by hand. `voicebench report
 
 The 2026-10-29 runs (`20261029T*`: re-runs at `0f996db` with rescores at `f430675`, and runs at `f4306752`) are described in [`docs/rerun_comparison.md`](../docs/rerun_comparison.md) and [`docs/benchmark_current_main.md`](../docs/benchmark_current_main.md).
 
-## Day 5 runs (current)
+## Real-speech runs
+
+`results/realspeech/` holds run files of a different kind
+(`voicebench.realspeech.RealSpeechRun`, `"kind": "real-speech-external"`):
+Whisper on 150 human Hindi clips from Google FLEURS (`hi_in` test, CC BY
+4.0, manifest `data/realspeech/fleurs_hi_in_test_150.json`). They are not
+synthetic benchmark runs: no scenarios, intents or task success. The
+synthetic tools (`report`, `analyze`, `compare`, `rescore`) do not read
+them; use `voicebench realspeech report|compare|rescore`. The dashboard
+lists them in a separate section.
+
+| file | command |
+|------|---------|
+| `20261031T200244Z-faster-whisper-small-realspeech-fleurs-hi_in-auto.json` | `make realspeech` (see note) |
+| `20261031T202136Z-faster-whisper-small-realspeech-fleurs-hi_in-hint.json` | `make realspeech POLICY=hint` (see note) |
+| `…-auto-rescored-9336d77.json` | `voicebench realspeech rescore results/realspeech/20261031T200244Z-…-auto.json` |
+| `…-hint-rescored-9336d77.json` | `voicebench realspeech rescore results/realspeech/20261031T202136Z-…-hint.json` |
+
+- The two runs were started as
+  `voicebench realspeech run --model small --language-policy {auto,hint} -v --command "make realspeech POLICY={auto,hint}"`:
+  the command those make targets run, plus `-v` for progress output. The
+  hidden `--command` flag only sets the recorded command string.
+- Code at `6e3ddb7`, clean tree (recorded in each file); the audio came
+  from `make realspeech-fetch`, all 150 sha256 matching the manifest.
+  Model `Systran/faster-whisper-small@536b0662742c02347bc0e980a01041f333bce120`,
+  faster-whisper 1.2.1, CPU int8, beam 5, temperature 0: the benchmark's
+  settings. One untimed warm-up call each.
+- Machine: Intel Xeon @ 2.10 GHz, 4 logical CPUs, the same CPU model as
+  the day 5 and 2026-10-29 runs, but a different container.
+- The rescores at `9336d77` keep every transcript, latency and language
+  unchanged and add the per-clip reference numbers and how many the
+  matcher's parser reads back. Read the figures from them:
+  `voicebench realspeech report <rescored file>`.
+- Cost 0 USD, as for the benchmark.
+
+## Day 5 runs (current synthetic baseline)
 
 | file | command |
 |------|---------|

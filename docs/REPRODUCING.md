@@ -17,7 +17,7 @@ an API key or costs money.
 ```bash
 sudo apt-get install espeak-ng      # only needed to (re)generate audio
 make setup-locked                   # exact versions (Python 3.11+); or `make setup` for any 3.10+
-make test                           # with espeak-ng installed: 290 pass, 1 skipped (real-model test); without it 285 pass, 6 skipped (5 need espeak-ng); no model download
+make test                           # with espeak-ng installed: 336 pass, 1 skipped (real-model test); without it 331 pass, 6 skipped (5 need espeak-ng); no model download
 ```
 
 ## 2. Scenarios → audio
@@ -71,6 +71,25 @@ have: `make bench MODEL=/path/to/ctranslate2-whisper-small`.
 Each run file records the command, git commit (with `-dirty` if the tree
 had changes), scenario sha256, model revision, decoding settings, hardware,
 warm-up count and wall time.
+
+## 3b. Real-speech lane (FLEURS Hindi)
+
+```bash
+make realspeech-fetch       # FLEURS hi_in test archive (~250 MB) from huggingface.co at revision 70bb2e84,
+                            # 150 manifest clips extracted to .cache/realspeech/ (git-ignored), sha256-checked
+make realspeech             # auto-detect -> results/realspeech/   (~20 min on 4 CPUs)
+make realspeech POLICY=hint # Whisper told the language is hi
+.venv/bin/voicebench realspeech report results/realspeech/<run>.json
+.venv/bin/voicebench realspeech compare results/realspeech/<auto>.json results/realspeech/<hint>.json
+```
+
+The download needs `huggingface.co` and its file hosts (`*.hf.co`), as
+for the weights. `voicebench realspeech manifest` rebuilds
+`data/realspeech/fleurs_hi_in_test_150.json` from the same revision and
+seed. Rebuilt with the default `--out` it is byte-identical (checked on
+day 8); with another `--out`, only the recorded command line differs. A rebuilt run on another CPU will
+likely differ in some transcripts, as the benchmark's do (section 4); that
+has not been measured for this lane.
 
 ## 4. What is and isn't reproducible
 
