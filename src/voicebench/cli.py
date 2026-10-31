@@ -267,6 +267,117 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_realspeech_manifest(args: argparse.Namespace) -> int:
+    import json
+
+    from voicebench import realspeech as rs
+
+    try:
+        tsv = rs.hf_download(rs.FLEURS_TSV, local_files_only=args.offline)
+        archive = rs.hf_download(rs.FLEURS_AUDIO, local_files_only=args.offline)
+    except Exception as exc:
+        print(f"could not download FLEURS {rs.FLEURS_CONFIG}/{rs.FLEURS_SPLIT}: {type(exc).__name__}: {exc}",
+              file=sys.stderr)
+        return 2
+    command = f"voicebench realspeech manifest --n {args.n} --seed {args.seed} --out {args.out}"
+    manifest = rs.build_manifest(tsv.read_text(encoding="utf-8"), archive, args.n, args.seed, command,
+                                 file_sha256(tsv), file_sha256(archive))
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(f"wrote {out}: {len(manifest['clips'])} of {manifest['selection']['population']} clips, seed {args.seed}")
+    return 0
+
+
+def _cmd_realspeech_fetch(args: argparse.Namespace) -> int:
+    from voicebench import realspeech as rs
+
+    manifest = rs.load_manifest(args.manifest)
+    if manifest["dataset"]["revision"] != rs.FLEURS_REVISION:
+        print(f"{args.manifest} was built from revision {manifest['dataset']['revision']}, "
+              f"this code downloads {rs.FLEURS_REVISION}", file=sys.stderr)
+        return 1
+    try:
+        archive = rs.hf_download(rs.FLEURS_AUDIO, local_files_only=args.offline)
+    except Exception as exc:
+        print(f"could not download {rs.FLEURS_AUDIO}: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+    want = manifest["dataset"]["audio_archive"]["sha256"]
+    if file_sha256(archive) != want:
+        print(f"{archive}: sha256 does not match the manifest ({want})", file=sys.stderr)
+        return 1
+    try:
+        n = rs.extract_clips(manifest, archive, args.audio)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"{n['clips']} clips in {args.audio} ({n['written']} written, {n['already_present']} already there), "
+          "all sha256 match the manifest")
+    return 0
+
+
+def _cmd_realspeech_run(args: argparse.Namespace) -> int:
+    from voicebench import realspeech as rs
+    from voicebench.asr import ASRUnavailable, FasterWhisperTranscriber
+    from voicebench.runner import save
+
+    manifest = rs.load_manifest(args.manifest)
+    transcriber = FasterWhisperTranscriber(args.model, local_files_only=args.offline)
+    command = " ".join(["voicebench", *sys.argv[1:]]) if args.command is None else args.command
+    try:
+        run = rs.run_realspeech(manifest, args.manifest, args.audio, transcriber, command,
+                                language_policy=args.language_policy,
+                                progress=(lambda m: print(m, file=sys.stderr)) if args.verbose else None)
+    except FileNotFoundError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    except ASRUnavailable as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    path = save(run, args.out)
+    print(rs.format_realspeech(rs.summarise_realspeech(run)))
+    print(f"saved {path}")
+    return 0
+
+
+def _load_realspeech_run(path: str):
+    from pydantic import ValidationError
+
+    from voicebench.realspeech import load_realspeech_run
+
+    try:
+        return load_realspeech_run(path)
+    except FileNotFoundError:
+        print(f"{path}: no such file", file=sys.stderr)
+    except (ValidationError, ValueError) as exc:
+        print(f"{path}: not a valid real-speech run file: {str(exc).splitlines()[0]}", file=sys.stderr)
+    return None
+
+
+def _cmd_realspeech_rescore(args: argparse.Namespace) -> int:
+    from voicebench import realspeech as rs
+    from voicebench.runner import save
+
+    previous = _load_realspeech_run(args.run)
+    if previous is None:
+        return 1
+    run = rs.rescore_realspeech(previous, " ".join(["voicebench", *sys.argv[1:]]))
+    path = save(run, args.out)
+    print(rs.format_realspeech(rs.summarise_realspeech(run)))
+    print(f"saved {path}")
+    return 0
+
+
+def _cmd_realspeech_report(args: argparse.Namespace) -> int:
+    from voicebench import realspeech as rs
+
+    run = _load_realspeech_run(args.run)
+    if run is None:
+        return 1
+    print(rs.format_realspeech(rs.summarise_realspeech(run), rs.word_error_breakdown(run)))
+    return 0
+
+
 def _cmd_dashboard(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -336,6 +447,44 @@ def main(argv: list[str] | None = None) -> int:
     p_rep = sub.add_parser("report", help="print the breakdown of a saved run")
     p_rep.add_argument("run")
     p_rep.set_defaults(func=_cmd_report)
+
+    p_real = sub.add_parser("realspeech", help="real-speech validation lane (FLEURS Hindi, external audio)")
+    rsub = p_real.add_subparsers(dest="realspeech_command", required=True)
+    from voicebench import realspeech as _rs
+
+    p_rm = rsub.add_parser("manifest", help="(re)build the committed clip manifest; downloads from huggingface.co")
+    p_rm.add_argument("--n", type=int, default=_rs.DEFAULT_N)
+    p_rm.add_argument("--seed", type=int, default=_rs.DEFAULT_SEED)
+    p_rm.add_argument("--out", default=_rs.DEFAULT_MANIFEST)
+    p_rm.add_argument("--offline", action="store_true", help="use the Hugging Face cache only")
+    p_rm.set_defaults(func=_cmd_realspeech_manifest)
+
+    p_rf = rsub.add_parser("fetch", help="download the FLEURS archive and extract the manifest's clips (git-ignored)")
+    p_rf.add_argument("--manifest", default=_rs.DEFAULT_MANIFEST)
+    p_rf.add_argument("--audio", default=_rs.DEFAULT_AUDIO_DIR)
+    p_rf.add_argument("--offline", action="store_true", help="use the Hugging Face cache only")
+    p_rf.set_defaults(func=_cmd_realspeech_fetch)
+
+    p_rr = rsub.add_parser("run", help="transcribe the manifest's clips with Whisper and save a real-speech run")
+    p_rr.add_argument("--manifest", default=_rs.DEFAULT_MANIFEST)
+    p_rr.add_argument("--audio", default=_rs.DEFAULT_AUDIO_DIR)
+    p_rr.add_argument("--model", default="small", help="Whisper model name or local CTranslate2 dir")
+    p_rr.add_argument("--language-policy", choices=list(_rs.LANGUAGE_POLICIES), default="auto",
+                      help="auto: Whisper detects the language; hint: Whisper is told 'hi'")
+    p_rr.add_argument("--offline", action="store_true", help="never try to download weights")
+    p_rr.add_argument("--out", default=_rs.DEFAULT_RESULTS_DIR)
+    p_rr.add_argument("--command", default=None, help=argparse.SUPPRESS)
+    p_rr.add_argument("-v", "--verbose", action="store_true")
+    p_rr.set_defaults(func=_cmd_realspeech_run)
+
+    p_rs = rsub.add_parser("rescore", help="re-score a saved real-speech run's transcripts with the current code")
+    p_rs.add_argument("run")
+    p_rs.add_argument("--out", default=_rs.DEFAULT_RESULTS_DIR)
+    p_rs.set_defaults(func=_cmd_realspeech_rescore)
+
+    p_rp = rsub.add_parser("report", help="print WER, language, loop, latency and word-edit breakdown of a real-speech run")
+    p_rp.add_argument("run")
+    p_rp.set_defaults(func=_cmd_realspeech_report)
 
     p_dash = sub.add_parser("dashboard", help="serve the results dashboard")
     p_dash.add_argument("--results", default="results")

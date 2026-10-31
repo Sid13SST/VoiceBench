@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV ?= .venv
 PY := $(VENV)/bin/python
 
-.PHONY: setup setup-locked test validate audio audio-check bench run clean
+.PHONY: setup setup-locked test validate audio audio-check bench realspeech-fetch realspeech run clean
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -34,6 +34,17 @@ MODEL ?= small
 POLICY ?= auto
 bench:
 	$(PY) -m voicebench run --model $(MODEL) --language-policy $(POLICY) --out results
+
+# Real-speech validation lane (human Hindi speech, Google FLEURS hi_in test,
+# CC BY 4.0). Separate from the synthetic benchmark: results go to
+# results/realspeech/. realspeech-fetch downloads the FLEURS archive from
+# huggingface.co at a pinned revision and extracts the 150 clips listed in
+# data/realspeech/fleurs_hi_in_test_150.json into .cache/ (git-ignored).
+realspeech-fetch:
+	$(PY) -m voicebench realspeech fetch
+
+realspeech:
+	$(PY) -m voicebench realspeech run --model $(MODEL) --language-policy $(POLICY)
 
 HOST ?= 127.0.0.1
 PORT ?= 8000

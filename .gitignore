@@ -6,3 +6,6 @@ dist/
 *.egg-info/
 .pytest_cache/
 .coverage
+
+# Real-speech audio (FLEURS) is downloaded at run time, never committed.
+.cache/
