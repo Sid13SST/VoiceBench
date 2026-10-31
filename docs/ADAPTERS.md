@@ -186,6 +186,10 @@ other exception is recorded as that scenario's error.
 - **No HTTP support.** VoiceBench does not call remote services for
   transcription or understanding, and has no built-in client, timeouts or
   retries for them.
+  The one exception is the separate, opt-in Gnani lane
+  ([GNANI_QA.md](GNANI_QA.md)): its transcriber (`voicebench.gnani`) uses
+  this hook through its own client, and its runs are kept apart from and
+  labelled differently to the local ones.
 - **The built-in matcher is unchanged.** Its open limitations (lexicon
   written alongside the scenarios, domain given to it, intent ties broken
   by list order; see the README's Limitations) still apply to every

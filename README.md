@@ -156,6 +156,17 @@ runs (Xeon @ 2.10 GHz, 4 vCPU). Reproduce with
   WER (the headline WER stays strict; folded, it is 0.622 / 0.582) or any
   synthetic result. Details: [`docs/failure_analysis.md`](docs/failure_analysis.md#real-speech-fleurs-hindi).
 
+## Separate lane: Gnani Voice QA (external API)
+
+An optional, opt-in lane runs Gnani.ai's Prisma speech-to-text and Timbre
+text-to-speech **remote APIs** on small subsets of the same audio and
+scenarios, plus a TTS -> STT round trip (`voicebench gnani run|roundtrip`).
+It needs your own `GNANI_API_KEY` and `--live`, and uses paid credit. Its run
+files live in `results/gnani/`, are labelled as external-API runs everywhere
+they appear, and are **not** part of, averaged with or comparable to the
+local Whisper numbers above, which it does not change. See
+[docs/GNANI_QA.md](docs/GNANI_QA.md).
+
 ## Quick start
 
 Requires Python 3.10+ and, to regenerate audio, `espeak-ng`
