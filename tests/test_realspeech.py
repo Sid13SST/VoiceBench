@@ -203,3 +203,21 @@ def test_run_records_the_commit_from_before_decoding(lane, monkeypatch):
     monkeypatch.setattr(rs, "git_commit", lambda repo: next(calls))
     run = rs.run_realspeech(manifest, mfile, audio, Scripted(texts), "pytest")
     assert run.git_commit == "commit-at-start"
+
+
+def test_reference_numbers_take_whole_tokens_only():
+    # From FLEURS references in the committed manifest.
+    assert rs.reference_numbers("सोवियत की यूनियन रेड आर्मी के 800,000 से ज़्यादा सैनिकों ने") == ["800000"]
+    assert rs.reference_numbers("11वीं, 12वीं और 13वीं सदी (1000-1300) में") == ["1000", "1300"]
+    assert rs.reference_numbers("सुबह 10: 00-11: 00 बजे, 11:35 पर, 3:2 से") == []
+    assert rs.reference_numbers("35mm है. यह 20% हिस्सा") == ["20"]
+
+
+def test_numbers_recovered_uses_the_matcher_parser():
+    ref = "उस समय करीब 10,000 लोग थे और 20 जहाज़"
+    assert rs.numbers_recovered(ref, "उस समय करीब दस हज़ार लोग थे और बीस जहाज") == 2
+    assert rs.numbers_recovered(ref, "उस समय करीब 10,000 लोग थे") == 1
+    assert rs.numbers_recovered(ref, "उस समय करीब १०००० लोग थे") == 1  # Devanagari digits
+    assert rs.numbers_recovered(ref, "") == 0
+    clip = rs.score_clip({"id": "x", "reference": ref}, "दस हज़ार लोग")
+    assert (clip.reference_numbers, clip.numbers_recovered) == (["10000", "20"], 1)

@@ -20,6 +20,7 @@ import hashlib
 import io
 import json
 import random
+import re
 import tarfile
 import time
 from collections import Counter
@@ -34,6 +35,7 @@ from voicebench.analysis import has_repetition_loop
 from voicebench.asr import ASRUnavailable
 from voicebench.loader import file_sha256
 from voicebench.metrics import corpus_wer, percentile, wer
+from voicebench.nlu.numbers import find_numbers
 from voicebench.runner import git_commit, hardware_info
 from voicebench.textnorm import script_profile, tokens
 
@@ -199,6 +201,40 @@ def extract_clips(manifest: dict[str, Any], archive: str | Path, out_dir: str | 
     return {"clips": len(want), "written": written, "already_present": len(want) - written}
 
 
+# ----------------------------------------------------------------- numbers
+
+_TIME_OR_RATIO_RE = re.compile(r"\d+\s*:\s*\d+")  # 11:35, 3:2, "10: 00"
+_REF_NUMBER_RE = re.compile(r"\d{1,3}(?:,\d{3})+|\d+")
+_DIGIT_GROUP_COMMA_RE = re.compile(r"(?<=[0-9०-९]),(?=[0-9०-९])")
+
+
+def reference_numbers(text: str) -> list[str]:
+    """Numbers a reference writes in digits, as digit strings ("800,000" -> "800000").
+
+    Only whole tokens count: ordinals and units glued to the digits
+    ("11वीं", "35mm") and times or ratios ("11:35", "3:2") are left out,
+    because what a correct transcript would contain for them is not one
+    number. Ranges ("1000-1300") count as both numbers.
+    """
+    out = []
+    for tok in _TIME_OR_RATIO_RE.sub(" ", text).split():
+        tok = tok.strip("()[]\"'“”.,;!?%")
+        for part in tok.split("-"):
+            if _REF_NUMBER_RE.fullmatch(part):
+                out.append(part.replace(",", ""))
+    return out
+
+
+def transcript_numbers(text: str) -> list[str]:
+    """Values the built-in matcher's number parser reads in a transcript (digits or number words)."""
+    return [n.value for n in find_numbers(tokens(_DIGIT_GROUP_COMMA_RE.sub("", text)))]
+
+
+def numbers_recovered(reference: str, transcript: str) -> int:
+    """How many of the reference's numbers the parser finds in the transcript (as a multiset)."""
+    return sum((Counter(reference_numbers(reference)) & Counter(transcript_numbers(transcript))).values())
+
+
 # --------------------------------------------------------------- run files
 
 
@@ -214,6 +250,11 @@ class ClipResult(BaseModel):
     language_probability: Optional[float] = None
     transcript_script: Optional[str] = None
     repetition_loop: Optional[bool] = None
+    # Numbers the reference writes in digits, and how many of them the
+    # matcher's number parser finds in the transcript. None in run files
+    # written before this field existed; ``rescore`` fills it in.
+    reference_numbers: list[str] = Field(default_factory=list)
+    numbers_recovered: Optional[int] = Field(default=None, ge=0)
     latency_ms: Optional[float] = Field(default=None, ge=0)
     audio_duration_s: Optional[float] = Field(default=None, ge=0)
     error: Optional[str] = None
@@ -253,6 +294,8 @@ def score_clip(clip: dict[str, Any], transcript: str, **timing: Any) -> ClipResu
         reference_words=len(tokens(clip["reference"])),
         transcript_script=script_profile(transcript),
         repetition_loop=has_repetition_loop(transcript),
+        reference_numbers=reference_numbers(clip["reference"]),
+        numbers_recovered=numbers_recovered(clip["reference"], transcript),
         **timing,
     )
 
@@ -378,6 +421,7 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
     rtf = [r.latency_ms / 1000 / r.audio_duration_s for r in timed]
     wers = [r.wer for r in ok if r.wer is not None]
     on_hindi = [r for r in ok if r.detected_language == HINT_LANGUAGE]
+    with_numbers = [r for r in ok if r.reference_numbers and r.numbers_recovered is not None]
     return {
         "run_id": run.run_id,
         "kind": run.kind,
@@ -398,6 +442,9 @@ def summarise_realspeech(run: RealSpeechRun) -> dict[str, Any]:
         "detected_languages": dict(Counter(r.detected_language for r in ok).most_common()),
         "transcript_scripts": dict(Counter(r.transcript_script for r in ok).most_common()),
         "repetition_loops": sum(1 for r in ok if r.repetition_loop),
+        "clips_with_numbers": len(with_numbers),
+        "reference_numbers": sum(len(r.reference_numbers) for r in with_numbers),
+        "numbers_recovered": sum(r.numbers_recovered for r in with_numbers) if with_numbers else None,
         "categories": dict(Counter(c for c in (clip_category(r, run.language_policy) for r in run.results)
                                    if c is not None).most_common()),
         "audio_s": sum(r.audio_duration_s or 0 for r in ok),
@@ -492,6 +539,10 @@ def format_realspeech(summary: dict[str, Any], breakdown: Optional[dict[str, Any
         f"detected language          " + ", ".join(f"{k}={v}" for k, v in summary["detected_languages"].items()),
         f"transcript script          " + ", ".join(f"{k}={v}" for k, v in summary["transcript_scripts"].items()),
         f"repetition loops           {summary['repetition_loops']}",
+        f"numbers recovered          "
+        + ("-" if summary["numbers_recovered"] is None else
+           f"{summary['numbers_recovered']} of {summary['reference_numbers']} reference numbers "
+           f"({summary['clips_with_numbers']} clips), read by the matcher's number parser"),
         f"primary categories         " + ", ".join(f"{k}={v}" for k, v in summary["categories"].items()),
     ]
     if summary["latency_p50_ms"] is not None:

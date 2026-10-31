@@ -21,6 +21,7 @@
 <tr><th>detected language</th><td class="num">{% for k, v in s.detected_languages.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
 <tr><th>transcript script</th><td class="num">{% for k, v in s.transcript_scripts.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
 <tr><th>repetition loops</th><td class="num">{{ s.repetition_loops }}</td></tr>
+<tr><th>numbers recovered</th><td class="num">{% if s.numbers_recovered is not none %}{{ s.numbers_recovered }} of {{ s.reference_numbers }} reference numbers ({{ s.clips_with_numbers }} clips), read by the matcher's number parser{% else %}- (run file predates this field; rescore it){% endif %}</td></tr>
 <tr><th>primary categories</th><td class="num">{% for k, v in s.categories.items() %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
 {% if s.latency_p50_ms is not none %}<tr><th>latency p50 / p95</th><td class="num">{{ "%.0f"|format(s.latency_p50_ms) }} / {{ "%.0f"|format(s.latency_p95_ms) }} ms (RTF {{ "%.2f"|format(s.rtf_p50) }} / {{ "%.2f"|format(s.rtf_p95) }})</td></tr>{% endif %}
 <tr><th>word edits</th><td class="num">substitutions {% for k, v in b.substitutions.items() %}{{ k }}={{ v }} {% endfor %}· insertions {{ b.insertions }} · deletions {{ b.deletions }}</td></tr>
