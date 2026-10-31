@@ -497,6 +497,7 @@ def _variant_key(word: str) -> str:
     return fold_spelling_variants(word)
 
 
+_NUKTA = "\u093c"
 _UNASPIRATE = str.maketrans("खघछझठढथधफभ", "कगचजटडतदपब")
 _SHORTEN = str.maketrans("ीूईऊ", "िुइउ")
 
@@ -522,7 +523,7 @@ def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
     or two adjacent reference words written as one (each counted once).
     """
     subs: Counter = Counter()
-    ins = dels = hits = split_join = 0
+    ins = dels = hits = split_join = nukta_kept = nukta_dropped = 0
     pairs: Counter = Counter()
     for r in run.results:
         if r.error is not None or not r.transcript:
@@ -536,6 +537,7 @@ def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
             rw, hw = ref[chunk.ref_start_idx:chunk.ref_end_idx], hyp[chunk.hyp_start_idx:chunk.hyp_end_idx]
             if chunk.type == "equal":
                 hits += len(rw)
+                nukta_kept += sum(1 for w in rw if _NUKTA in w)
             elif chunk.type == "insert":
                 ins += len(hw)
             elif chunk.type == "delete":
@@ -548,6 +550,7 @@ def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
                         kind = "script"
                     elif _variant_key(a) == _variant_key(b):
                         kind = "spelling_variant"
+                        nukta_dropped += _NUKTA in a and _NUKTA not in b
                     elif _variant_key(a).translate(_UNASPIRATE) == _variant_key(b).translate(_UNASPIRATE):
                         kind = "aspiration"
                     elif _variant_key(a).translate(_SHORTEN) == _variant_key(b).translate(_SHORTEN):
@@ -567,6 +570,10 @@ def word_error_breakdown(run: RealSpeechRun) -> dict[str, Any]:
         "insertions": ins,
         "deletions": dels,
         "split_or_join": split_join,
+        # Reference words with a nukta that the transcript got right with the
+        # nukta, and right except for a missing nukta.
+        "nukta_kept": nukta_kept,
+        "nukta_dropped": nukta_dropped,
         "top_pairs": {k: [(a, b, n) for (kk, a, b), n in pairs.most_common() if kk == k][:10]
                       for k in subs},
     }
@@ -609,7 +616,9 @@ def format_realspeech(summary: dict[str, Any], breakdown: Optional[dict[str, Any
     if breakdown:
         lines += ["", f"word edits: hits={breakdown['hits']} insertions={breakdown['insertions']} "
                       f"deletions={breakdown['deletions']} split_or_join={breakdown['split_or_join']}",
-                  "substitutions: " + ", ".join(f"{k}={v}" for k, v in breakdown["substitutions"].items())]
+                  "substitutions: " + ", ".join(f"{k}={v}" for k, v in breakdown["substitutions"].items()),
+                  f"nukta words otherwise right: nukta kept {breakdown['nukta_kept']}, "
+                  f"dropped {breakdown['nukta_dropped']}"]
         for kind, rows in breakdown["top_pairs"].items():
             if kind == "other":
                 continue

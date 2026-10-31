@@ -186,9 +186,14 @@ def test_word_error_breakdown_kinds(lane):
     texts = {"a": ("मैं घर जा रहा हूँ", "hi"), "b": ("वह बाज़ार गयी", "hi"), "c": ("पानि", "hi")}
     run2 = rs.run_realspeech(manifest, mfile, audio, Scripted(texts), "pytest", language_policy="hint")
     assert rs.word_error_breakdown(run2)["substitutions"] == {"other": 1, "vowel_length": 1}
+    assert rs.word_error_breakdown(run2)["nukta_kept"] == 1  # "बाज़ार" right with its nukta
+    run2.results[1].transcript = "वह बाजार गई"
+    assert (rs.word_error_breakdown(run2)["nukta_kept"], rs.word_error_breakdown(run2)["nukta_dropped"]) == (0, 1)
     run2.results[0].reference, run2.results[0].transcript = "गंभीर मौसम था", "गंबीर मौसम ता"
-    assert rs.word_error_breakdown(run2)["substitutions"] == {"aspiration": 2, "other": 1, "vowel_length": 1}
+    assert rs.word_error_breakdown(run2)["substitutions"] == {"aspiration": 2, "vowel_length": 1,
+                                                              "spelling_variant": 1}
     assert ("हूँ", "हूं", 1) in b["top_pairs"]["spelling_variant"]
+    assert (b["nukta_kept"], b["nukta_dropped"]) == (0, 0)  # "बाज़ार" -> "bazaar" is a script error
     s = rs.summarise_realspeech(run)
     # "हूँ" -> "हूं" is an error in the headline WER only: 4 vs 3 errors over 9 reference words
     assert (s["corpus_wer"], s["corpus_wer_spelling_folded"]) == (pytest.approx(4 / 9), pytest.approx(3 / 9))
