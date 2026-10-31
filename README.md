@@ -124,7 +124,7 @@ and shown in their own section of the dashboard.
 | clips with WER 0 / WER > 1 | 0 / 12 | 0 / 4 |
 | detected language | hi 131, ur 15, ne 2, jw 1, id 1 | hi 150 (given) |
 | repetition loops | 8 | 11 |
-| reference numbers the matcher reads back | 6 of 34 | 7 of 34 |
+| reference numbers the matcher reads back | 9 of 34 (6 before day 9) | 10 of 34 (7 before day 9) |
 | latency p50 / p95 | 7563 / 13760 ms | 6408 / 12572 ms |
 | real-time factor p50 / p95 | 0.70 / 1.17 | 0.61 / 1.10 |
 | wall time (1753 s of audio) | 1239 s | 1118 s |

@@ -430,3 +430,57 @@ unchanged.
   the commit the first rescores named was rewritten; the rescores were
   regenerated at the new commit (`9336d77`) so the recorded commit exists
   on the branch.
+
+## Day 9 (2026-10-31)
+
+**Goal**: find out why the matcher's number parser read back only 6 of 34
+(auto) and 7 of 34 (hint) reference numbers on the real Hindi runs, and
+fix what is the parser's fault. Rescoring only: no Whisper run, no audio
+regenerated.
+
+**Done**
+- **Split**: the 150 clips split into dev and held-out halves, 75 each,
+  by FLEURS sentence (15 sentences are read twice), seed 20261101,
+  committed as `data/realspeech/fleurs_hi_in_test_150_split.json`
+  (`voicebench realspeech split`). Dev: 15 reference numbers in 12
+  clips; held-out: 19 in 16. Analysis and rules used dev only; held-out
+  was scored once, after the parser commit.
+- **Causes of the misses** (all 34, auto / hint; table per half in
+  `docs/failure_analysis.md`): found already 6 / 7; misspelled or garbled
+  number word 14 / 16; number missing or in a loop 5 / 7; Urdu script
+  5 / 0; parser gaps 4 / 4. So 24 of 28 misses (hint 23 of 27) are in
+  Whisper's transcript. No fractions occur in these references; ordinals
+  are not counted; no formatting misses.
+- **Parser** (`nlu/numbers.py`): all standard Hindi number words 21-99
+  (the lexicon had only 1-20 and round tens, so 31, 53, 63, 89 could not
+  be read even if spelled right); a unit and its hundred written as one
+  word ("चारसौ", "चार्सो"); "सो" for "सौ" right after a number, never alone.
+  Regression tests from the dev transcripts, including the misspellings
+  that stay unread.
+- **Numbers recovered**, before → after (rescores at `08a104e`):
+  - dev: 1 → 2 (auto), 1 → 2 (hint), of 15;
+  - held-out: 5 → 7 (auto), 6 → 8 (hint), of 19;
+  - all: 6 → 9 (auto), 7 → 10 (hint), of 34.
+  Corpus WER unchanged (0.631 / 0.593).
+- **Synthetic runs** (day 5 and 2026-10-29, auto and hint, rescored):
+  no intent, slot, task outcome or WER changes. Hindi transcripts contain
+  the expected number 0 / 6 (auto) and 0 / 7 (hint) times, before and
+  after; Hindi-English 4 / 5 and 3 / 5, unchanged.
+- `voicebench realspeech report RUN --split FILE` prints numbers
+  recovered per half.
+- Tests: 360 pass, 6 skipped without espeak-ng (331 and 6 before).
+
+**Not improved**
+- Whisper's misspellings ("सथटर" for सत्तर, "उन्निस्स्सो तर्सट" for 1963),
+  numbers it left out or looped over, and Urdu-script output. Those are
+  recognition errors; guessing at misspellings would also read "साथ" as
+  "साठ".
+- "सो साल" (100 years): "सो" alone stays unread, as it is also "so".
+- Held-out shows Whisper dropping "ह" ("बारासो", "10 अजार"); dev had no
+  readable case of it, so no rule was added. It needs a fresh held-out
+  set.
+
+**Corrections**
+- Day 8 said no miss was a correctly spelled number word missing from
+  the parser. The parser did lack the correct words for most numbers
+  21-99, and "चार्सो" is a regular joined spelling, not a misspelling.

@@ -120,6 +120,8 @@ files:
 - `results/realspeech/20261031T202136Z-faster-whisper-small-realspeech-fleurs-hi_in-hint.json` (language hint `hi`)
 - the same two `…-rescored-9336d77.json`: identical transcripts, with the
   per-clip number fields added. The figures below come from these.
+- the same two `…-rescored-08a104e.json` (day 9): identical transcripts
+  and WER, numbers recovered with the day 9 number parser (section 3).
 
 Every figure is printed by `voicebench realspeech report <rescored file>`
 or `voicebench realspeech compare <auto> <hint>`. There are no intents in
@@ -185,20 +187,97 @@ anything.
 34 numbers are written in digits in the references (28 clips; ordinals
 such as "11वीं", units such as "35mm", and times are left out). The report
 checks whether the matcher's number parser (`nlu/numbers.py`) finds each
-value in the transcript. It finds **6 of 34** (auto) and **7 of 34**
-(hint).
+value in the transcript. It found **6 of 34** (auto) and **7 of 34**
+(hint) at `9336d77`, and finds **9 of 34** and **10 of 34** after the
+parser change below (rescores at `08a104e`).
 
-Every miss was looked at. Whisper wrote years and amounts as Hindi number
-words that are misspelled or run together: "उन्निस्स्सो तर्सट" for 1963
-(उन्नीस सौ तिरसठ), "अटारा सो उन्नासी" for 1889, "चार्सो" for 400,
-"10 अजार" for 10,000, "चालिच हजार" for 40,000. Or the clip was in Urdu
-script or a loop. No transcript contains Devanagari digits (the report's
-"transcripts with Devanagari digits" is 0 in both runs), and no missed
-number was a correctly spelled Hindi number word that the parser lacks.
-So none of the suggested number fixes (Devanagari numerals, more Hindi
-number words) is backed by these runs, and none was made. What a correct
-transcript would need is a better recogniser, or a parser that guesses at
-misspellings, which this repo does not attempt.
+Method. The 150 clips are split into a dev half and a held-out half
+(`data/realspeech/fleurs_hi_in_test_150_split.json`, seed 20261101, 75
+clips each). The split is by FLEURS sentence, because 15 sentences are
+read by two speakers and would otherwise be in both halves. Dev has 15
+reference numbers in 12 clips; held-out has 19 in 16. The misses were
+classified and the parser changed using dev only; held-out was scored once,
+after the rules were committed. No transcript was regenerated: the run
+files' saved transcripts were rescored.
+
+Cause of each reference number the parser did not find, before the change
+(primary cause; auto / hint):
+
+| cause | dev (15) | held-out (19) | all (34) |
+|---|---|---|---|
+| found already | 1 / 1 | 5 / 6 | 6 / 7 |
+| Whisper: number word misspelled or garbled | 7 / 9 | 7 / 7 | 14 / 16 |
+| Whisper: number missing (left out, or a repetition loop) | 3 / 3 | 2 / 4 | 5 / 7 |
+| Whisper: transcript in Urdu script | 2 / 0 | 3 / 0 | 5 / 0 |
+| parser: unit and hundred as one word, or "सो" after a number (fixed) | 1 / 1 | 2 / 2 | 3 / 3 |
+| parser: "सो" for "सौ" on its own (not fixed) | 1 / 1 | 0 / 0 | 1 / 1 |
+
+Examples of the misspellings: "उन्निस्स्सो तर्सट" for 1963 (उन्नीस सौ
+तिरसठ), "सथटर" and "सक्तर" for सत्तर (70), "चालिच हजार" for 40,000,
+"ती साजार" for तीस हज़ार, "बारासो" for बारह सौ (1200), "10 अजार" for
+10,000, "चोथ तिस" for चौंतीस (34). "अटारा सो उन्नासी" for 1889 would be
+1879 even read correctly: the last word is 79, not 89. No transcript
+contains Devanagari digits. Of the categories one might expect, fractions
+(ढाई, साढ़े, सवा) do not occur in these references, ordinals ("11वीं") are
+left out of the count on purpose, and no miss was a formatting problem
+(digit grouping "800,000" is handled).
+
+So the large majority of the gap is Whisper's transcript, not the matcher:
+with auto-detect, 24 of the 28 misses (hint 23 of 27) have no
+correctly spelled number to find.
+
+The parser fix (`nlu/numbers.py`), from the dev misses:
+
+- The lexicon had only 1-20 and the round tens, so the dev references'
+  31, 53, 63 and 89 (as in 1963 and 1889) could not be read even when
+  spelled correctly. All standard words for 21-99 are now listed, with
+  the -नबे / -नवे endings of 91-99 and the other dictionary variants.
+  No dev transcript had one of these words spelled correctly, so this
+  adds nothing to the counts here; a test pins the full 0-99 coverage.
+- Whisper wrote 400 as "चार्सो": a unit and its hundred as one word, with
+  or without a virama, and "सो" for "सौ". Such a fused word is now read,
+  and "सो" counts as a hundred right after a number. "सो" alone is not
+  read, because it is also "so" and "sleep"; that leaves one miss ("सो
+  साल" for 100 years) unread.
+- Misspellings are not guessed at. A fuzzy match would also read "साथ"
+  (with) as "साठ" (60); tests pin the dev misspellings that stay unread.
+
+Numbers recovered, before (`9336d77`) and after (`08a104e`), auto / hint:
+
+| half | before | after |
+|---|---|---|
+| dev (15) | 1 / 1 | 2 / 2 |
+| held-out (19) | 5 / 6 | 7 / 8 |
+| all (34) | 6 / 7 | 9 / 10 |
+
+The held-out gain is one clip, "एक सो पचास और दोसो" for "150 और 200",
+which the two dev-derived rules read, and no number was lost. Numbers
+the parser reads that are not among the reference's digits go from 21
+to 21 (dev, auto; hint 25 to 25) and from 20 to 18 (held-out, auto;
+hint 22 to 20): "एक" and "पचास" were read as 1 and 50 before. Headline
+WER is unchanged (0.631 / 0.593): only `numbers_recovered` differs in the
+rescored files, on two clips per run.
+
+Not fixed, and why:
+
+- The Whisper misspellings (14 / 16 of 34) and the missing or Urdu-script
+  numbers (10 / 7). These need a better recogniser, not a better parser.
+- Held-out shows a pattern dev did not: Whisper dropping "ह" ("बारासो"
+  for बारह सौ, "10 अजार" for 10 हज़ार). On dev the same habit only
+  appears in words that stay unreadable anyway ("अटारा", "जार",
+  "साजार"), so a rule for it had no dev evidence, and adding one now
+  would be tuning on held-out. It needs a fresh held-out set to test.
+- Synthetic benchmark: rescoring the day 5 and 2026-10-29 runs changes
+  no intent, slot, task outcome or WER. The parser finds the expected
+  number in 0 of 6 (auto) and 0 of 7 (hint) Hindi transcripts both before
+  and after, and 4 / 5 and 3 / 5 for Hindi-English, also unchanged. The
+  synthetic Hindi transcripts are garbled ("पंच पंच नोशुन" for पाँच पाँच
+  नौ शून्य), so no number in them is readable.
+
+Correction to day 8: it said no miss was a correctly spelled number word
+the parser lacked. True for these transcripts, but the parser also lacked
+the correct words for most reference numbers below 100, and it treated
+"चार्सो" as unreadable when it is a regular joined spelling.
 
 ### 4. Nukta and chandrabindu: one matcher fix
 
@@ -218,7 +297,7 @@ before the change) and `test_folded_number_words_keep_their_value`.
 Before and after:
 
 - **Real-speech lane**: unchanged. WER keeps both marks (`normalise` is
-  not changed), and numbers recovered stays 6 / 34 and 7 / 34, because
+  not changed), and numbers recovered stayed 6 / 34 and 7 / 34, because
   every number word the parser knows was already listed with and without
   the marks. Corpus WER with the two marks folded, reported as a
   diagnostic, is 0.622 (auto) and 0.582 (hint); about 0.01 of WER is
