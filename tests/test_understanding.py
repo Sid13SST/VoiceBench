@@ -136,7 +136,9 @@ def test_default_path_is_the_builtin_matcher(setup):
 def test_default_rescore_of_every_committed_run_is_unchanged():
     from voicebench.loader import load_scenarios
 
-    runs = {r.run_id: r for r in map(load_run, sorted((ROOT / "results").rglob("*.json")))}
+    # Synthetic runs only: results/realspeech/ holds real-speech run files, a different kind.
+    paths = [p for p in sorted((ROOT / "results").rglob("*.json")) if "realspeech" not in p.relative_to(ROOT).parts]
+    runs = {r.run_id: r for r in map(load_run, paths)}
     assert len(runs) >= 13
     # The day 3 runs predate the day 4 matcher fix; their committed rescore
     # holds the current scoring.
