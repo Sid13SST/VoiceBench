@@ -16,14 +16,19 @@ Audio is never committed here: synthesized WAVs stay in the git-ignored
 
 ## Committed runs
 
-None yet. The lane was built and tested offline against a mock of the API;
-no live request has been made from this repository, so there are no
-measured Gnani numbers.
-
-When a live run is committed, add a row here:
+Four live runs, all made on 1 Nov 2026 (UTC) by `--live` requests to the
+Gnani API. The credit column is the cumulative Usage-page reading for the
+day: the Usage page does not split credit use per run, so per-run splits are
+unavailable. The STT billing (7.51 credits, for the STT requests of all four
+runs) showed up first;
+the TTS billing for the roundtrip run (2.72 credits) showed up after it.
 
 | file | command | date (UTC) | requests / HTTP attempts | audio s sent | credit before -> after (Usage page) | operator |
 |------|---------|------------|--------------------------|--------------|-------------------------------------|----------|
+| `synthetic/20261101T044219Z-gnani-prisma-v3.0-auto.json` | `voicebench gnani run --lane synthetic --max-requests 2 --live` | 2026-11-01 04:42:19 | 2 / 2 (2 STT) | 7.493 | 5000.00 -> 4992.49 after all STT runs; 4989.77 after TTS billing landed (per-run split unavailable) | Siddhant |
+| `synthetic/20261101T044342Z-gnani-prisma-v3.0-auto.json` | `voicebench gnani run --lane synthetic --max-requests 51 --live` | 2026-11-01 04:43:42 | 51 / 51 (51 STT) | 202.679 | as above (per-run split unavailable) | Siddhant |
+| `realspeech/20261101T044527Z-gnani-prisma-v3.0-realspeech-fleurs-hi_in-auto.json` | `voicebench gnani run --lane realspeech --max-requests 76 --live` | 2026-11-01 04:45:27 | 75 / 75 (75 STT) | 852.24 | as above (per-run split unavailable) | Siddhant |
+| `roundtrip/20261101T044548Z-gnani-roundtrip-timbre-v2.5-prisma-v3.0-hint.json` | `voicebench gnani roundtrip --max-requests 20 --live` | 2026-11-01 04:45:48 | 20 / 20 (10 TTS + 10 STT, 390 TTS characters) | 23.52 | as above; its TTS share is the 2.72 credits that landed last | Siddhant |
 
 The request counts are in each run file under `asr_config.external_api`.
 The credit columns can only come from the app.gnani.ai Usage page: the API
