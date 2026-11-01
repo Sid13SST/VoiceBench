@@ -1,0 +1,142 @@
+{
+ "kind": "gnani-roundtrip-audio",
+ "run_id": "20261101T044548Z-gnani-roundtrip-timbre-v2.5-prisma-v3.0-hint",
+ "note": "Audio synthesized by the Gnani Timbre API. The WAVs stay in the git-ignored cache and are not committed; the sha256 values identify them. A re-synthesis need not be byte-identical.",
+ "tts": {
+  "model": "timbre-v2.5",
+  "voices": {
+   "en": "Kaveri",
+   "hi": "Nalini",
+   "hi-en": "Poorvi"
+  },
+  "languages": {
+   "en": "en-IN",
+   "hi": "hi-IN",
+   "hi-en": "hi-IN"
+  },
+  "speed": 1.0,
+  "sample_rate": 16000
+ },
+ "files": [
+  {
+   "scenario_id": "v1-001",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-001.wav",
+   "sha256": "7583145b71030a7bf42a511b8cc9031e9afff7cf8dd6426ccb642ab9d3d9fe06",
+   "bytes": 87084,
+   "duration_s": 2.72,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "en",
+   "voice": "Kaveri",
+   "text": "hi can you tell me the balance in my savings account"
+  },
+  {
+   "scenario_id": "v1-002",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-002.wav",
+   "sha256": "4688e4d52b7450d166e5b0e7da76a64ac922ee53328891ec92b5d10236485739",
+   "bytes": 66604,
+   "duration_s": 2.08,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "en",
+   "voice": "Kaveri",
+   "text": "please send five thousand rupees to rahul"
+  },
+  {
+   "scenario_id": "v1-011",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-011.wav",
+   "sha256": "a60355af41cd1af18ba268dffcf83bff9805bff63e4219aedd6db3bbc59063b8",
+   "bytes": 76844,
+   "duration_s": 2.4,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "hi",
+   "voice": "Nalini",
+   "text": "मेरे सेविंग्स खाते में कितना बैलेंस है"
+  },
+  {
+   "scenario_id": "v1-021",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-021.wav",
+   "sha256": "7e1027842eb03c8d62157b44e61de2799963c9f21f80481a3a66f549a69c9374",
+   "bytes": 66604,
+   "duration_s": 2.08,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "hi-en",
+   "voice": "Poorvi",
+   "text": "मेरे current account का balance बताइए"
+  },
+  {
+   "scenario_id": "v1-031",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-031.wav",
+   "sha256": "96d6e10f4057bc2e8a9893f5e3fcbd6835f7cdca665b906998a90537fd36cd7b",
+   "bytes": 81964,
+   "duration_s": 2.56,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "en",
+   "voice": "Kaveri",
+   "text": "i need a train ticket from pune to mumbai today"
+  },
+  {
+   "scenario_id": "v1-032",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-032.wav",
+   "sha256": "9a42227d1ac252d018fba8cb651dfeb7741e607071df6c174d2ac610ed6e2bc3",
+   "bytes": 66604,
+   "duration_s": 2.08,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "hi",
+   "voice": "Nalini",
+   "text": "मेरे बचत खाते का बैलेंस बताइए"
+  },
+  {
+   "scenario_id": "v1-033",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-033.wav",
+   "sha256": "4c6d82c9b2be6b5dcb60c94919e4c1cc437e1c0cd5b7a196253cf0a3029de83b",
+   "bytes": 76844,
+   "duration_s": 2.4,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "hi-en",
+   "voice": "Poorvi",
+   "text": "मेरे phone पर app load नहीं हो रहा"
+  },
+  {
+   "scenario_id": "v1-041",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-041.wav",
+   "sha256": "cecba76e5703f3bde6fe1870efd4853c6f1394382cdb09d149985e2da65ab05f",
+   "bytes": 66604,
+   "duration_s": 2.08,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "en",
+   "voice": "Kaveri",
+   "text": "transfer three thousand rupees to neha"
+  },
+  {
+   "scenario_id": "v1-042",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-042.wav",
+   "sha256": "bbba1ced1e00e7f0fb172187009db7d14c0bb3bb0303d68ff53f9d248baac79b",
+   "bytes": 56364,
+   "duration_s": 1.76,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "hi",
+   "voice": "Nalini",
+   "text": "एक वेज बिरयानी चाहिए"
+  },
+  {
+   "scenario_id": "v1-043",
+   "path": ".cache/gnani/roundtrip/20261101T044530Z/v1-043.wav",
+   "sha256": "318a7dc76ea0bfb6d4ea3377a379a6b2d565f1f4823fd5971bfbd7e33527a553",
+   "bytes": 107564,
+   "duration_s": 3.36,
+   "sample_rate": 16000,
+   "channels": 1,
+   "language": "hi-en",
+   "voice": "Poorvi",
+   "text": "delhi से goa की flight twenty december के लिए book करो"
+  }
+ ]
+}

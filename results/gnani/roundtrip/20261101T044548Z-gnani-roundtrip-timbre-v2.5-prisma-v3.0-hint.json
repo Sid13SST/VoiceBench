@@ -1,0 +1,501 @@
+{
+  "run_id": "20261101T044548Z-gnani-roundtrip-timbre-v2.5-prisma-v3.0-hint",
+  "created_at": "2026-11-01T04:45:48.890018Z",
+  "source": "measured",
+  "command": "voicebench gnani roundtrip --max-requests 20 --live",
+  "git_commit": "29bc5fbc12df090d05c2d4e1e74ee5ec0102e815",
+  "scenarios_file": "scenarios/v1.jsonl",
+  "scenarios_sha256": "75fed5e1566f1e6781d62c3fb6329337723997b02ed75b9bd8b27665a5a1aa1b",
+  "asr_model": "gnani-roundtrip-timbre-v2.5-prisma-v3.0",
+  "asr_model_version": "timbre-v2.5+prisma-v3.0",
+  "asr_config": {
+    "name": "gnani-roundtrip-timbre-v2.5-prisma-v3.0",
+    "lane": "tts-stt-roundtrip",
+    "measures": "Timbre TTS and Prisma STT together; errors cannot be attributed to either one",
+    "backend": "gnani-rest-tts+stt",
+    "backend_version": "timbre-v2.5+prisma-v3.0",
+    "device": "cloud",
+    "tts": {
+      "model": "timbre-v2.5",
+      "voices": {
+        "en": "Kaveri",
+        "hi": "Nalini",
+        "hi-en": "Poorvi"
+      },
+      "languages": {
+        "en": "en-IN",
+        "hi": "hi-IN",
+        "hi-en": "hi-IN"
+      },
+      "speed": 1.0,
+      "sample_rate": 16000
+    },
+    "stt": {
+      "model": "prisma-v3.0",
+      "format": "verbatim",
+      "language_codes": {
+        "en": "en-IN",
+        "hi": "hi-IN",
+        "hi-en": "hi-IN,en-IN"
+      },
+      "models_reported_by_api": [
+        "prisma-v3.0"
+      ]
+    },
+    "external_api": {
+      "provider": "gnani.ai",
+      "endpoints": [
+        "https://api.vachana.ai/api/v1/tts/inference",
+        "https://api.vachana.ai/stt/v3"
+      ],
+      "comparability": "external API run: not comparable with, and never to be averaged with, local Whisper runs",
+      "http_attempts": 20,
+      "max_requests": 20,
+      "requests": 20,
+      "stt_requests": 10,
+      "tts_requests": 10,
+      "audio_seconds_sent": 23.52,
+      "tts_characters": 390,
+      "request_log": [
+        {
+          "n": 1,
+          "kind": "tts",
+          "item": "v1-001",
+          "model": "timbre-v2.5",
+          "voice": "Kaveri",
+          "language": "en-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "3065f43a1702487f90a20a9e9d9fbb5b"
+        },
+        {
+          "n": 2,
+          "kind": "stt",
+          "item": "v1-001",
+          "language_code": "en-IN",
+          "audio_s": 2.72,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "88470362a20d4b858a2cf408762ee80e"
+        },
+        {
+          "n": 3,
+          "kind": "tts",
+          "item": "v1-002",
+          "model": "timbre-v2.5",
+          "voice": "Kaveri",
+          "language": "en-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "62786bb92def42f6a805c42391329143"
+        },
+        {
+          "n": 4,
+          "kind": "stt",
+          "item": "v1-002",
+          "language_code": "en-IN",
+          "audio_s": 2.08,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "8949311bb05047f6af78b91349566184"
+        },
+        {
+          "n": 5,
+          "kind": "tts",
+          "item": "v1-011",
+          "model": "timbre-v2.5",
+          "voice": "Nalini",
+          "language": "hi-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "6fbf2da6f356483797b6dde82f5309b8"
+        },
+        {
+          "n": 6,
+          "kind": "stt",
+          "item": "v1-011",
+          "language_code": "hi-IN",
+          "audio_s": 2.4,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "1ca147d82c1648cc8e7454251e2e3f16"
+        },
+        {
+          "n": 7,
+          "kind": "tts",
+          "item": "v1-021",
+          "model": "timbre-v2.5",
+          "voice": "Poorvi",
+          "language": "hi-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "27a0e080fcd74cc3aa113f1a712c7c84"
+        },
+        {
+          "n": 8,
+          "kind": "stt",
+          "item": "v1-021",
+          "language_code": "hi-IN,en-IN",
+          "audio_s": 2.08,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "d667988b50844b79bb9126c2a3e84a77"
+        },
+        {
+          "n": 9,
+          "kind": "tts",
+          "item": "v1-031",
+          "model": "timbre-v2.5",
+          "voice": "Kaveri",
+          "language": "en-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "8a08683494644be792b15580ab62e4f7"
+        },
+        {
+          "n": 10,
+          "kind": "stt",
+          "item": "v1-031",
+          "language_code": "en-IN",
+          "audio_s": 2.56,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "8c535e1e2067412cb1e02245ad4368f5"
+        },
+        {
+          "n": 11,
+          "kind": "tts",
+          "item": "v1-032",
+          "model": "timbre-v2.5",
+          "voice": "Nalini",
+          "language": "hi-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "0df68c8dc41e4d669439f9a9cf70aadc"
+        },
+        {
+          "n": 12,
+          "kind": "stt",
+          "item": "v1-032",
+          "language_code": "hi-IN",
+          "audio_s": 2.08,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "97d58df64eea4fdaa90b78981815dabc"
+        },
+        {
+          "n": 13,
+          "kind": "tts",
+          "item": "v1-033",
+          "model": "timbre-v2.5",
+          "voice": "Poorvi",
+          "language": "hi-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "ea313e6a0c284698b90e7f81a6fec2bf"
+        },
+        {
+          "n": 14,
+          "kind": "stt",
+          "item": "v1-033",
+          "language_code": "hi-IN,en-IN",
+          "audio_s": 2.4,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "5a0ee8b0a2a140728ee02b2754c5de04"
+        },
+        {
+          "n": 15,
+          "kind": "tts",
+          "item": "v1-041",
+          "model": "timbre-v2.5",
+          "voice": "Kaveri",
+          "language": "en-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "c74a955b66994cf39ecdf982413e303b"
+        },
+        {
+          "n": 16,
+          "kind": "stt",
+          "item": "v1-041",
+          "language_code": "en-IN",
+          "audio_s": 2.08,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "f92e804b34e64b9dbfbfe17ca03b57e3"
+        },
+        {
+          "n": 17,
+          "kind": "tts",
+          "item": "v1-042",
+          "model": "timbre-v2.5",
+          "voice": "Nalini",
+          "language": "hi-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "df93e475e7934539983b2f74aae0b373"
+        },
+        {
+          "n": 18,
+          "kind": "stt",
+          "item": "v1-042",
+          "language_code": "hi-IN",
+          "audio_s": 1.76,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "ff39b180bc5b4035bcc7bd34ca4ad5b1"
+        },
+        {
+          "n": 19,
+          "kind": "tts",
+          "item": "v1-043",
+          "model": "timbre-v2.5",
+          "voice": "Poorvi",
+          "language": "hi-IN",
+          "status": 200,
+          "attempts": 1,
+          "request_id": "e35ba93da04643729e67fb9aa9e11d61"
+        },
+        {
+          "n": 20,
+          "kind": "stt",
+          "item": "v1-043",
+          "language_code": "hi-IN,en-IN",
+          "audio_s": 3.36,
+          "status": 200,
+          "attempts": 1,
+          "request_id": "0d6d4b7d039e49e3a52ed6ab2704c684"
+        }
+      ],
+      "credit_usage": "not reported by the API; read the credit delta on app.gnani.ai (Usage page)"
+    }
+  },
+  "language_policy": "hint",
+  "device": "cloud",
+  "tts_engine": "gnani.ai timbre-v2.5 (external API)",
+  "hardware": {
+    "cpu": "AMD EPYC 9655 96-Core Processor",
+    "logical_cpus": 1,
+    "ram_gb": 1.9,
+    "os": "Linux 7.2.14",
+    "machine": "x86_64",
+    "python": "3.10.12"
+  },
+  "warmup_runs": 0,
+  "wall_time_s": 18.16,
+  "cost_note": "external API (gnani.ai): credit per request is not published and not reported by the API, so cost_usd is not recorded; read the credit used on the app.gnani.ai Usage page",
+  "rescored_from": null,
+  "understander": "builtin",
+  "notes": "EXTERNAL API RUN (gnani.ai): Gnani Timbre TTS + Prisma STT round trip (measures both services together). 10 of 50 scenarios. external API run: not comparable with, and never to be averaged with, local Whisper runs. Latency includes the network round trip. Results depend on a remote service and are not bit-reproducible.",
+  "results": [
+    {
+      "scenario_id": "v1-001",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "Hi, can you tell me the balance in my savings account?",
+      "detected_language": "en",
+      "transcript_script": "latin",
+      "wer": 0.0,
+      "predicted_intent": "check_balance",
+      "predicted_slots": {
+        "account_type": "savings"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 1053.4,
+      "audio_duration_s": 2.72,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-002",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "Please send five thousand rupees to Rahul.",
+      "detected_language": "en",
+      "transcript_script": "latin",
+      "wer": 0.0,
+      "predicted_intent": "transfer_money",
+      "predicted_slots": {
+        "amount": "5000",
+        "recipient": "rahul"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 599.7,
+      "audio_duration_s": 2.08,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-011",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "मेरे सेविंग्स खाते में कितना बैलेंस है?",
+      "detected_language": "hi",
+      "transcript_script": "devanagari",
+      "wer": 0.0,
+      "predicted_intent": "check_balance",
+      "predicted_slots": {
+        "account_type": "savings"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 718.6,
+      "audio_duration_s": 2.4,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-021",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "मेरे करंट अकाउंट का बैलेंस बताइये।",
+      "detected_language": "hi",
+      "transcript_script": "devanagari",
+      "wer": 0.6666666666666666,
+      "predicted_intent": "check_balance",
+      "predicted_slots": {
+        "account_type": "current"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 650.1,
+      "audio_duration_s": 2.08,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-031",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "I need a train ticket from Pune to Mumbai today.",
+      "detected_language": "en",
+      "transcript_script": "latin",
+      "wer": 0.0,
+      "predicted_intent": "book_ticket",
+      "predicted_slots": {
+        "mode": "train",
+        "source": "pune",
+        "destination": "mumbai",
+        "date": "today"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 660.8,
+      "audio_duration_s": 2.56,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-032",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "मेरे बचत खाते का बैलेंस बताइये।",
+      "detected_language": "hi",
+      "transcript_script": "devanagari",
+      "wer": 0.16666666666666666,
+      "predicted_intent": "check_balance",
+      "predicted_slots": {
+        "account_type": "savings"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 705.4,
+      "audio_duration_s": 2.08,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-033",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "मेरे फोन पर ऐप लोड नहीं हो रहा।",
+      "detected_language": "hi",
+      "transcript_script": "devanagari",
+      "wer": 0.375,
+      "predicted_intent": "report_issue",
+      "predicted_slots": {
+        "device": "phone",
+        "issue": "not loading"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 653.2,
+      "audio_duration_s": 2.4,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-041",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "Transfer three thousand rupees to Neha.",
+      "detected_language": "en",
+      "transcript_script": "latin",
+      "wer": 0.0,
+      "predicted_intent": "transfer_money",
+      "predicted_slots": {
+        "amount": "3000",
+        "recipient": "neha"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 644.7,
+      "audio_duration_s": 2.08,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-042",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "एक वेज बिरयानी चाहिए",
+      "detected_language": "hi",
+      "transcript_script": "devanagari",
+      "wer": 0.0,
+      "predicted_intent": "order_food",
+      "predicted_slots": {
+        "item": "veg biryani",
+        "quantity": "1"
+      },
+      "intent_correct": true,
+      "slots_correct": true,
+      "task_success": true,
+      "latency_ms": 616.9,
+      "audio_duration_s": 1.76,
+      "cost_usd": null,
+      "error": null
+    },
+    {
+      "scenario_id": "v1-043",
+      "scenario_version": "v1",
+      "source": "measured",
+      "transcript": "डेल्ही से गोवा की फ्लाइट ट्वेंटी दिसंबर के लिए बुक करो।",
+      "detected_language": "hi",
+      "transcript_script": "devanagari",
+      "wer": 0.5454545454545454,
+      "predicted_intent": "book_ticket",
+      "predicted_slots": {
+        "mode": "flight",
+        "destination": "goa"
+      },
+      "intent_correct": true,
+      "slots_correct": false,
+      "task_success": false,
+      "latency_ms": 743.0,
+      "audio_duration_s": 3.36,
+      "cost_usd": null,
+      "error": null
+    }
+  ]
+}
