@@ -12,11 +12,10 @@ import time
 from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
-import numpy as np
-
-from voicebench.audio.signal import SAMPLE_RATE, read_wav
+if TYPE_CHECKING:  # numpy and the audio stack are only needed to transcribe, not to read run files
+    import numpy as np
 
 # Scenario language -> Whisper language code when the caller's language is
 # given to the model as a hint. Whisper has no code-switched "hi-en" code,
@@ -116,6 +115,8 @@ class FasterWhisperTranscriber:
         return f"{path.parent.parent.name.removeprefix('models--').replace('--', '/')}@{path.name}"
 
     def transcribe(self, audio: np.ndarray, language: Optional[str] = None) -> Transcript:
+        from voicebench.audio.signal import SAMPLE_RATE
+
         model = self._load()
         start = time.perf_counter()
         segments, info = model.transcribe(
@@ -140,6 +141,8 @@ class FasterWhisperTranscriber:
         )
 
     def transcribe_file(self, path: str | Path, language: Optional[str] = None) -> Transcript:
+        from voicebench.audio.signal import read_wav
+
         return self.transcribe(read_wav(path), language=language)
 
     # Local inference has no per-call charge. Electricity and the hardware
