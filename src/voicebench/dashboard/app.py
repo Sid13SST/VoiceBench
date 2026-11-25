@@ -67,6 +67,13 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         except RunUnusable as e:
             raise HTTPException(422, f"run {entry.run_id!r} ({entry.path.name}) cannot be shown: {e}") from None
 
+    def _shown(path: Path) -> str:
+        """A directory as shown on the page: relative to the repo root when it is inside it."""
+        try:
+            return str(Path(path).resolve().relative_to(store.repo_root.resolve()))
+        except ValueError:
+            return str(path)
+
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
         rows, unusable = [], []
@@ -92,11 +99,11 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         return TEMPLATES.TemplateResponse(
             request,
             "index.html",
-            {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": str(store.results_dir),
+            {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": _shown(store.results_dir),
              "real_rows": [{"run": r, "s": summarise_realspeech(r)} for r in real.runs()],
-             "real_invalid": real.invalid, "real_dir": str(real.directory),
+             "real_invalid": real.invalid, "real_dir": _shown(real.directory),
              "gnani_rows": gnani_rows, "gnani_real_rows": gnani_real_rows, "gnani_invalid": gnani_invalid,
-             "gnani_dir": str(gnani)},
+             "gnani_dir": _shown(gnani)},
         )
 
     @app.get("/realspeech/{run_id}", response_class=HTMLResponse)
