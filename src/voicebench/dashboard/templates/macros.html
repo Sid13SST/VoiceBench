@@ -3,3 +3,13 @@
 {% macro understander(name) -%}
 {% if not name or name == "builtin" %}builtin{% else %}<span class="tag" title="not the built-in matcher">external</span> <code class="name">{{ name }}</code>{% endif %}
 {%- endmacro %}
+
+{# ok/n with a bar. The bar is ok/n; the printed ratio is the number. #}
+{% macro ratio(ok, n) -%}
+<div class="metric"><span class="val">{{ ok }}/{{ n }}</span><span class="bar" aria-hidden="true"><span style="width: {{ '%.1f'|format(100 * ok / n) if n else 0 }}%"></span></span></div>
+{%- endmacro %}
+
+{# A WER value with a bar. WER can exceed 1, so the bar is capped at 1; the printed value is never capped. #}
+{% macro wer(value, fmt="%.2f") -%}
+{% if value is none %}-{% else %}<div class="metric" title="bar capped at WER 1.0"><span class="val">{{ fmt|format(value) }}</span><span class="bar wer" aria-hidden="true"><span style="width: {{ '%.1f'|format(100 * ([value, 1.0]|min)) }}%"></span></span></div>{% endif %}
+{%- endmacro %}
