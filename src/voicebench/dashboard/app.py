@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 
 from voicebench.dashboard.data import (
     CONDITIONS,
@@ -21,9 +22,11 @@ from voicebench.dashboard.data import (
     RunStore,
     RunUnusable,
     case_rows,
+    featured_runs,
     matrix,
     run_overview,
 )
+from voicebench.dashboard.live import MAX_BODY_BYTES, AnalyzeRequest, analyze
 from voicebench.dashboard.data import word_diff
 from voicebench.gnani import COMPARABILITY, external_provider
 from voicebench.realspeech import clip_category, summarise_realspeech, word_error_breakdown
@@ -46,7 +49,6 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
     gnani_real = RealSpeechStore(gnani / "realspeech")
     audio_dir = Path(audio_dir)
     app = FastAPI(title="VoiceBench", docs_url="/api/docs", redoc_url=None)
-
     def _find(run_id: str):
         """(entry, the store it is in, its Gnani lane or None)."""
         entry = store.get(run_id)
@@ -105,6 +107,63 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
              "gnani_rows": gnani_rows, "gnani_real_rows": gnani_real_rows, "gnani_invalid": gnani_invalid,
              "gnani_dir": _shown(gnani)},
         )
+
+    @app.get("/api/clips")
+    def api_clips():
+        """The 50 benchmark scenarios with the stored baseline transcript of each, for the live console."""
+        featured = featured_runs(store)
+        if not featured:
+            return {"baseline": {}, "clips": []}
+        any_entry = featured.get("auto") or next(iter(featured.values()))
+        scenarios, _ = store.scenarios_for(any_entry.manifest)
+        baseline = {}
+        for policy, e in featured.items():
+            results = {r.scenario_id: r for r in e.manifest.results}
+            baseline[policy] = {"run_id": e.run_id, "asr_model": e.manifest.asr_model,
+                                "asr_model_version": e.manifest.asr_model_version, "results": results}
+        clips = []
+        for s in scenarios:
+            item = {"id": s.id, "language": s.language.value, "domain": s.domain.value,
+                    "condition": s.condition.value, "reference": s.reference,
+                    "expected_intent": s.expected_intent, "expected_slots": s.expected_slots,
+                    "audio": f"/audio/{s.id}.wav" if (audio_dir / f"{s.id}.wav").is_file() else None,
+                    "baseline": {}}
+            for policy, b in baseline.items():
+                r = b["results"].get(s.id)
+                if r is not None:
+                    item["baseline"][policy] = {
+                        "transcript": r.transcript, "detected_language": r.detected_language,
+                        "predicted_intent": r.predicted_intent, "predicted_slots": r.predicted_slots,
+                        "task_success": r.task_success, "wer": r.wer, "latency_ms": r.latency_ms,
+                        "error": r.error}
+            clips.append(item)
+        return {"baseline": {p: {k: v for k, v in b.items() if k != "results"} for p, b in baseline.items()},
+                "clips": clips}
+
+    @app.post("/api/analyze")
+    async def api_analyze(request: Request):
+        """Text only: intent, slots and WER for a browser transcript. Nothing is stored or logged."""
+        declared = request.headers.get("content-length")
+        if declared is not None and (not declared.isdigit() or int(declared) > MAX_BODY_BYTES):
+            raise HTTPException(413, f"request body over {MAX_BODY_BYTES} bytes")
+        body = await request.body()
+        if len(body) > MAX_BODY_BYTES:
+            raise HTTPException(413, f"request body over {MAX_BODY_BYTES} bytes")
+        try:
+            req = AnalyzeRequest.model_validate_json(body)
+        except ValidationError as e:
+            # Report what was wrong, never echo the submitted text back.
+            detail = [{"field": ".".join(str(x) for x in err["loc"]), "error": err["msg"]} for err in e.errors()]
+            return JSONResponse({"detail": detail}, status_code=422, headers={"Cache-Control": "no-store"})
+        scenario = None
+        if req.scenario_id is not None:
+            featured = featured_runs(store)
+            if featured:
+                scenarios, _ = store.scenarios_for(next(iter(featured.values())).manifest)
+                scenario = next((s for s in scenarios if s.id == req.scenario_id), None)
+            if scenario is None:
+                raise HTTPException(404, f"no scenario {req.scenario_id!r}")
+        return JSONResponse(analyze(req, scenario), headers={"Cache-Control": "no-store"})
 
     @app.get("/realspeech/{run_id}", response_class=HTMLResponse)
     def realspeech_page(request: Request, run_id: str, sort: str = Query("wer")):
