@@ -225,6 +225,14 @@ same app runs locally with `uvicorn app:app`; `make run` is unchanged.
 The deployed pages show only the committed run files: nothing is run or
 re-scored there.
 
+Screenshots of the dashboard on the committed runs (index, then the run
+page of `20261029T072645Z-faster-whisper-small-auto`):
+
+| desktop, 1280 px | phone, 390 px |
+|---|---|
+| <img src="docs/screenshots/dashboard-index-1280.webp" alt="Dashboard run list at 1280 px wide" width="560"> | <img src="docs/screenshots/dashboard-index-390.webp" alt="Dashboard run list at 390 px wide" width="200"> |
+| <img src="docs/screenshots/dashboard-run-1280.webp" alt="Run page at 1280 px wide" width="560"> | <img src="docs/screenshots/dashboard-run-390.webp" alt="Run page at 390 px wide" width="200"> |
+
 ## Limitations
 
 **The audio**
