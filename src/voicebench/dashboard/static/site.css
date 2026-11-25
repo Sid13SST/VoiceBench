@@ -221,10 +221,18 @@ canvas.scope { display: block; width: 100%; height: 64px; background: var(--bg-r
 .fact .l { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
 .fact .v { font: 500 17px/1.3 var(--mono); margin-top: 2px; overflow-wrap: anywhere; }
 .fact .v.small { font-size: 13px; }
+.fact.wide { grid-column: span 2; }
+#f-intent, #f-slots { display: flex; flex-wrap: wrap; gap: 6px; overflow-wrap: normal; word-break: normal; margin-top: 6px; }
+.slot-chip { display: inline-flex; flex-wrap: wrap; align-items: baseline; max-width: 100%; font: 500 12.5px/1.35 var(--mono);
+  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 8px; padding: 3px 8px; }
+.slot-chip .k { color: var(--text-3); }
+.slot-chip .eq { color: var(--text-3); padding: 0 1px; }
+.slot-chip .val { color: var(--text); }
+.slot-chip .k, .slot-chip .val { overflow-wrap: break-word; min-width: 0; }
 .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .compare > div { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; min-width: 0; }
 .compare h5 { margin: 0 0 6px; font: 600 11px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
-.compare p { margin: 0; overflow-wrap: anywhere; }
+.compare p { margin: 0; overflow-wrap: break-word; }
 .measured { margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-raised); padding: 12px 14px; }
 .measured summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text); }
 .measured[open] summary { margin-bottom: 8px; }

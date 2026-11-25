@@ -51,7 +51,7 @@
           {% for m in live_models %}<button type="button" data-model="{{ m.key }}" aria-pressed="{{ 'true' if m.key == 'base' else 'false' }}">whisper-{{ m.key }} <span class="muted tiny">{{ m.mb|round|int }} MB</span></button>{% endfor %}
         </div>
         <div class="row" style="margin-top:10px">
-          <label class="field">Backend<select id="backend"><option value="auto">Auto: WebGPU if available, else WASM</option><option value="wasm">WASM (CPU) only</option></select></label>
+          <label class="field">Backend<select id="backend"><option value="wasm" selected>WASM (CPU), recommended</option><option value="webgpu">WebGPU (experimental)</option></select></label>
         </div>
         <div class="model-meta" id="model-meta" aria-live="polite"></div>
         <div class="row" style="margin-top:12px">
@@ -99,7 +99,7 @@
           <button type="button" class="btn danger" id="cancel-btn" hidden>Cancel</button>
         </div>
         <div class="status-line" id="run-status" aria-live="polite"></div>
-        <div class="error-box" id="error" role="alert" hidden><b id="error-title">Error</b><pre id="error-detail"></pre><button type="button" class="btn" id="retry-btn">Retry</button></div>
+        <div class="error-box" id="error" role="alert" hidden><b id="error-title">Error</b><pre id="error-detail"></pre><div class="row"><button type="button" class="btn" id="retry-btn">Retry</button><button type="button" class="btn primary" id="alt-btn" hidden>Switch to WASM and retry</button></div></div>
 
         <p class="step" style="margin-top:18px"><span class="n">4</span> Result</p>
         <div class="result" id="result">
@@ -109,8 +109,8 @@
             <div class="fact"><div class="l">detected language</div><div class="v" id="f-lang">-</div></div>
             <div class="fact"><div class="l">latency (your device)</div><div class="v" id="f-latency">-</div></div>
             <div class="fact"><div class="l">real-time factor</div><div class="v" id="f-rtf">-</div></div>
-            <div class="fact"><div class="l">intent</div><div class="v small" id="f-intent">-</div></div>
-            <div class="fact"><div class="l">slots</div><div class="v small" id="f-slots">-</div></div>
+            <div class="fact wide"><div class="l">intent</div><div class="v small" id="f-intent">-</div></div>
+            <div class="fact wide"><div class="l">slots</div><div class="v small" id="f-slots">-</div></div>
             <div class="fact"><div class="l">WER</div><div class="v" id="f-wer">-</div></div>
           </div>
           <div class="compare" id="compare" hidden>

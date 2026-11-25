@@ -138,3 +138,10 @@ def test_measured_browser_models_come_from_the_committed_results(client):
     browser = [r for r in rows if r["load_ms"]]
     claims_all_over_1 = "every browser model measured here had a corpus WER above 1" in html
     assert claims_all_over_1 == all(r["corpus_wer"] > 1 for r in browser)
+
+
+def test_console_defaults_to_wasm_and_labels_webgpu_experimental(client):
+    html = client.get("/").text
+    select = html.split('<select id="backend">', 1)[1].split("</select>", 1)[0]
+    assert select.index('value="wasm" selected') < select.index('value="webgpu"')
+    assert "WebGPU (experimental)" in select and "auto" not in select.lower()

@@ -20,8 +20,10 @@ function init() {
   const st = {
     model: MODELS.find((m) => m.key === "base") || MODELS[0],
     worker: null, loaded: null, loading: null, busy: false,
-    audio: null, clips: [], baselineRuns: {}, pendingRun: false, runId: 0, recorder: null,
+    audio: null, clips: [], baselineRuns: {}, pendingRun: false, runId: 0, recorder: null, timer: null,
   };
+  // A transcription that has not answered by then is treated as hung: the worker is killed and recreated.
+  const timeoutMs = (seconds) => Math.max(30000, 8000 * seconds);
 
   // ---------------------------------------------------------------- helpers
   const el = (tag, props = {}, text) => {
@@ -39,7 +41,7 @@ function init() {
   };
   const fileUrl = (m, file) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/${file}`;
 
-  function showError(title, detail, retry) {
+  function showError(title, detail, retry, alt) {
     $("error-title").textContent = title;
     $("error-detail").textContent = detail || "";
     $("error-detail").hidden = !detail;
@@ -47,6 +49,12 @@ function init() {
     const btn = $("retry-btn");
     btn.hidden = !retry;
     btn.onclick = () => { hideError(); retry && retry(); };
+    const altBtn = $("alt-btn");
+    altBtn.hidden = !alt;
+    if (alt) {
+      altBtn.textContent = alt.label;
+      altBtn.onclick = () => { hideError(); alt.run(); };
+    }
   }
   const hideError = () => { $("error").hidden = true; };
 
@@ -115,6 +123,25 @@ function init() {
   });
 
   // ---------------------------------------------------------------- worker
+  function killWorker() {
+    clearTimeout(st.timer);
+    st.timer = null;
+    if (st.worker) st.worker.terminate();
+    st.worker = null;
+    st.loaded = null;
+    st.pendingRun = false;
+    st.runId += 1; // ignore anything still in flight
+    finishLoading();
+    endRun();
+    updateLoadedLabel();
+  }
+
+  function switchToWasmAndRetry() {
+    $("backend").value = "wasm";
+    updateLoadedLabel();
+    runTranscription();
+  }
+
   function newWorker() {
     if (st.worker) st.worker.terminate();
     st.worker = new Worker("/static/asr-worker.js", { type: "module" });
@@ -178,8 +205,12 @@ function init() {
       if (st.pendingRun) { st.pendingRun = false; runTranscription(); }
     } else if (data.type === "result") {
       if (data.id !== st.runId) return;
+      clearTimeout(st.timer);
+      st.timer = null;
       onTranscript(data);
     } else if (data.type === "error") {
+      clearTimeout(st.timer);
+      st.timer = null;
       const wasLoading = data.stage === "load";
       finishLoading();
       endRun();
@@ -188,23 +219,22 @@ function init() {
         st.loaded = null;
         showError(`Could not load whisper-${st.model.key}`, data.message, () => loadModel());
       } else {
-        showError("Transcription failed", data.message, () => runTranscription());
+        const onGpu = st.loaded && st.loaded.device === "webgpu";
+        showError("Transcription failed", data.message, () => runTranscription(),
+          onGpu ? { label: "Switch to WASM and retry", run: switchToWasmAndRetry } : null);
       }
     }
   }
 
   $("cancel-btn").addEventListener("click", () => {
-    const what = st.loading ? "Model loading" : "Transcription";
-    if (st.worker) st.worker.terminate();
-    st.worker = null;
-    st.loaded = null;
-    st.pendingRun = false;
-    finishLoading();
-    endRun();
+    const wasLoading = !!st.loading && !st.busy;
+    killWorker();
     $("cancel-btn").hidden = true;
     setStatus($("load-status"), "");
-    showError(`${what} cancelled`, "The model was unloaded. Files that finished downloading stay cached.", () => loadModel());
-    updateLoadedLabel();
+    setStatus($("run-status"), "");
+    showError(wasLoading ? "Model loading cancelled" : "Transcription cancelled",
+      "The model was unloaded. Files that finished downloading stay cached, so a retry loads from the browser cache.",
+      wasLoading ? () => loadModel() : () => runTranscription());
   });
 
   // ---------------------------------------------------------------- audio input
@@ -445,6 +475,19 @@ function init() {
     refreshRunButton();
     setStatus($("run-status"), `Transcribing ${st.audio.duration.toFixed(1)} s of audio on your device…`, true);
     const copy = st.audio.samples.slice();
+    const limit = timeoutMs(st.audio.duration);
+    const device = st.loaded.device;
+    clearTimeout(st.timer);
+    st.timer = setTimeout(() => {
+      killWorker();
+      setStatus($("run-status"), "");
+      const onGpu = device === "webgpu";
+      showError(`No transcript after ${Math.round(limit / 1000)} s`,
+        `whisper-${st.model.key} on ${onGpu ? "WebGPU" : "WASM"} did not answer within ${Math.round(limit / 1000)} s ` +
+        `(the limit is 8× the audio length, at least 30 s), so its worker was terminated. Retry starts a new worker and reloads the model from the browser cache.` +
+        (onGpu ? " WebGPU is experimental here; WASM is the reliable path." : " A smaller model may be faster on this device."),
+        () => runTranscription(), onGpu ? { label: "Switch to WASM and retry", run: switchToWasmAndRetry } : null);
+    }, limit);
     st.worker.postMessage({ type: "transcribe", id: st.runId, audio: copy, language: $("lang").value }, [copy.buffer]);
   }
   $("run-btn").addEventListener("click", runTranscription);
@@ -492,10 +535,32 @@ function init() {
     }
   }
 
+  // Text with a line-break opportunity after every "_" (so "account_type" breaks as "account_ / type", not mid-word).
+  function breakable(text) {
+    const frag = document.createDocumentFragment();
+    String(text).split(/(?<=_)/).forEach((part, i) => {
+      if (i) frag.append(document.createElement("wbr"));
+      frag.append(part);
+    });
+    return frag;
+  }
+  function chip(key, value) {
+    const c = el("span", { className: "slot-chip" });
+    if (key != null) {
+      const k = el("span", { className: "k" });
+      k.append(breakable(key));
+      c.append(k, el("span", { className: "eq" }, "="));
+    }
+    const v = el("span", { className: "val" });
+    v.append(breakable(value));
+    c.append(v);
+    return c;
+  }
+
   function showAnalysis(out, r, text) {
-    $("f-intent").textContent = out.intent || "none";
+    $("f-intent").replaceChildren(out.intent ? chip(null, out.intent) : "none");
     const slots = Object.entries(out.slots || {});
-    $("f-slots").textContent = slots.length ? slots.map(([k, v]) => `${k}=${v}`).join(", ") : "none";
+    $("f-slots").replaceChildren(...(slots.length ? slots.map(([k, v]) => chip(k, v)) : ["none"]));
     $("f-wer").textContent = out.wer != null ? out.wer.toFixed(2) : out.wer_note ? "n/a" : "no reference";
     const tags = $("result-tags");
     tags.append(el("span", { className: "pill" }, `domain ${out.domain}`), el("span", { className: "pill" }, `script ${out.transcript_script}`));

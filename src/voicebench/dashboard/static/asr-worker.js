@@ -25,8 +25,9 @@ async function load({ tjs, repo, revision, backend }) {
   T.env.allowLocalModels = false;
   T.env.useBrowserCache = true;
 
+  // WASM is the default. WebGPU is opt-in and experimental: in some browsers it loads but decoding never returns.
   let gpu = false;
-  if (backend === "auto") {
+  if (backend === "webgpu") {
     try {
       gpu = !!(self.navigator.gpu && (await self.navigator.gpu.requestAdapter()));
     } catch (_) {
