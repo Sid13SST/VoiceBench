@@ -1,92 +1,123 @@
 {% extends "base.html" %}
 {% import "macros.html" as ui %}
 {% block body %}
-<h1>Runs</h1>
-<h2>Synthetic benchmark (espeak-ng audio, 50 scenarios)</h2>
-<p class="muted">Every run file in <code>{{ results_dir }}</code>. Task success = right intent and every expected slot right.</p>
-{% if invalid %}<div class="banner">Skipped files that are not valid run files: {{ invalid | join(", ") }}</div>{% endif %}
-{% if unusable %}<div class="banner">Skipped run files whose scenarios cannot be loaded:
-{% for u in unusable %}<br>{{ u.file }}: {{ u.reason }}{% endfor %}</div>{% endif %}
-{% if not rows %}
-<p>No runs yet. Create one with <code>make bench</code>.</p>
-{% else %}
-<div class="table-wrap"><table>
-<thead><tr><th>run</th><th>understander</th><th>ASR</th><th>language</th><th>kind</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
-<tbody>
-{% for row in rows %}{% set m = row.entry.manifest %}
-<tr>
-  <td><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
-  <td class="small">{{ ui.understander(m.understander) }}</td>
-  <td>{{ m.asr_model }}</td>
-  <td>{{ m.language_policy or "-" }}</td>
-  <td class="small">
-    {% if m.source.value == "fixture" %}<b>fixture</b> (not a measurement){% elif m.asr_model == "oracle-reference" %}reference text (not ASR){% else %}measured{% endif %}
-    {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}
-    {% if not row.hash_ok %}<br><b>scenario file changed since run</b>{% endif %}
-  </td>
-  <td class="num">{{ row.overall.task_success }}/{{ row.overall.n }}</td>
-  <td class="num">{{ "%.2f"|format(row.overall.corpus_wer) if row.overall.corpus_wer is not none else "-" }}</td>
-</tr>
-{% endfor %}
-</tbody></table></div>
-{% endif %}
+<section class="hero reveal">
+  <span class="eyebrow"><span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Regression lab · en / hi / hinglish</span>
+  <h1>Voice<span class="accent">Bench</span></h1>
+  <p class="lede">A voice-understanding regression lab for <b>English, Hindi and Hinglish</b> voice agents.<br>
+  Each run sends the same 50 synthetic caller scenarios (clean, noisy, interrupted) through ASR and intent / slot matching, and scores WER and task success.</p>
+  <div class="stats">
+    <a class="stat reveal" style="--i: 1" href="#synthetic"><span class="v">{{ rows|length }}</span><span class="l">synthetic benchmark runs</span></a>
+    <a class="stat reveal" style="--i: 2" href="#realspeech"><span class="v">{{ real_rows|length }}</span><span class="l">real-speech runs (separate lane)</span></a>
+    <a class="stat reveal" style="--i: 3" href="#gnani"><span class="v">{{ gnani_rows|length + gnani_real_rows|length }}</span><span class="l">external API runs (not comparable)</span></a>
+  </div>
+</section>
 
-<h2 id="realspeech">Real speech (external audio)</h2>
-<div class="banner"><b>Not part of the synthetic benchmark.</b> Human Hindi read speech from Google FLEURS (hi_in, test split, CC BY 4.0), recognition only: no intents or task success. Run files in <code>{{ real_dir }}</code>.</div>
-{% if real_invalid %}<div class="banner">Skipped files that are not valid real-speech run files: {{ real_invalid | join(", ") }}</div>{% endif %}
-{% if not real_rows %}
-<p>No real-speech runs yet. Create one with <code>make realspeech-fetch</code> then <code>make realspeech</code>.</p>
-{% else %}
-<div class="table-wrap"><table>
-<thead><tr><th>run</th><th>ASR</th><th>language</th><th>data</th><th class="num">clips</th><th class="num">corpus WER</th><th class="num">detected hi</th><th class="num">loops</th></tr></thead>
-<tbody>
-{% for row in real_rows %}{% set m = row.run %}{% set s = row.s %}
-<tr>
-  <td><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
-  <td>{{ m.asr_model }}</td>
-  <td>{{ m.language_policy }}</td>
-  <td class="small"><span class="tag">real speech</span> {{ m.dataset.name }} {{ m.dataset.config }}/{{ m.dataset.split }}
-    {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}</td>
-  <td class="num">{{ s.n }}</td>
-  <td class="num">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }}</td>
-  <td class="num">{{ s.n_detected_hi }}/{{ s.n - s.errors }}</td>
-  <td class="num">{{ s.repetition_loops }}</td>
-</tr>
-{% endfor %}
-</tbody></table></div>
-{% endif %}
+<section class="section reveal" id="synthetic" style="--i: 2">
+  <div class="section-head">
+    <div>
+      <h2>Synthetic benchmark (espeak-ng audio, 50 scenarios)</h2>
+      <p class="muted small">Every run file in <code>{{ results_dir }}</code>. Task success = right intent and every expected slot right.</p>
+    </div>
+  </div>
+  {% if invalid %}<div class="banner">Skipped files that are not valid run files: {{ invalid | join(", ") }}</div>{% endif %}
+  {% if unusable %}<div class="banner">Skipped run files whose scenarios cannot be loaded:
+  {% for u in unusable %}<br>{{ u.file }}: {{ u.reason }}{% endfor %}</div>{% endif %}
+  {% if not rows %}
+  <div class="card"><p class="muted" style="margin:0">No runs yet. Create one with <code>make bench</code>.</p></div>
+  {% else %}
+  <div class="card flush"><div class="table-wrap"><table class="rtable">
+  <thead><tr><th>run</th><th>understander</th><th>ASR</th><th>language</th><th>kind</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
+  <tbody>
+  {% for row in rows %}{% set m = row.entry.manifest %}{% set o = row.overall %}
+  <tr>
+    <td class="run full"><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+    <td class="small" data-label="understander">{{ ui.understander(m.understander) }}</td>
+    <td class="nowrap" data-label="ASR">{{ m.asr_model }}</td>
+    <td data-label="language">{{ m.language_policy or "-" }}</td>
+    <td class="small kind" data-label="kind">
+      {% if m.source.value == "fixture" %}<b>fixture</b> (not a measurement){% elif m.asr_model == "oracle-reference" %}reference text (not ASR){% else %}measured{% endif %}
+      {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}
+      {% if not row.hash_ok %}<br><b class="warn-text">scenario file changed since run</b>{% endif %}
+    </td>
+    <td class="num" data-label="task success">{{ ui.ratio(o.task_success, o.n) }}</td>
+    <td class="num" data-label="corpus WER">{{ ui.wer(o.corpus_wer, "%.2f") }}</td>
+  </tr>
+  {% endfor %}
+  </tbody></table></div></div>
+  {% endif %}
+</section>
 
-<h2 id="gnani">External API runs (Gnani)</h2>
-<div class="banner"><b>Not part of the local benchmark, and not comparable with it.</b> These runs call Gnani.ai's remote, paid Prisma STT and Timbre TTS APIs on small subsets of the items. They are never merged with, averaged with or ranked against the local Whisper runs above. Run files in <code>{{ gnani_dir }}</code>; see docs/GNANI_QA.md.</div>
-{% if gnani_invalid %}<div class="banner">Skipped files: {{ gnani_invalid | join(", ") }}</div>{% endif %}
-{% if not gnani_rows and not gnani_real_rows %}
-<p>No external API runs.</p>
-{% else %}
-<div class="table-wrap"><table>
-<thead><tr><th>run</th><th>lane</th><th>system</th><th>language</th><th class="num">items</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
-<tbody>
-{% for row in gnani_rows %}{% set m = row.entry.manifest %}
-<tr>
-  <td><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
-  <td class="small"><span class="tag">external API</span> {% if row.lane == "roundtrip" %}TTS + STT round trip{% else %}synthetic audio{% endif %}</td>
-  <td>{{ m.asr_model }}<div class="small muted">understander {{ ui.understander(m.understander) }}</div></td>
-  <td>{{ m.language_policy or "-" }}</td>
-  <td class="num">{{ row.overall.n }}</td>
-  <td class="num">{{ row.overall.task_success }}/{{ row.overall.n }}</td>
-  <td class="num">{{ "%.2f"|format(row.overall.corpus_wer) if row.overall.corpus_wer is not none else "-" }}</td>
-</tr>
-{% endfor %}
-{% for row in gnani_real_rows %}{% set m = row.run %}{% set s = row.s %}
-<tr>
-  <td><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
-  <td class="small"><span class="tag">external API</span> real speech, {{ m.dataset.name }} {{ m.dataset.config }}</td>
-  <td>{{ m.asr_model }}</td>
-  <td>{{ m.language_policy }}</td>
-  <td class="num">{{ s.n }}</td>
-  <td class="num">-</td>
-  <td class="num">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }}</td>
-</tr>
-{% endfor %}
-</tbody></table></div>
-{% endif %}
+<section class="section reveal" id="realspeech" style="--i: 3">
+  <div class="section-head">
+    <div>
+      <h2>Real speech (external audio)</h2>
+      <p class="muted small">Run files in <code>{{ real_dir }}</code>.</p>
+    </div>
+  </div>
+  <div class="banner"><b>Not part of the synthetic benchmark.</b> Human Hindi read speech from Google FLEURS (hi_in, test split, CC BY 4.0), recognition only: no intents or task success.</div>
+  {% if real_invalid %}<div class="banner">Skipped files that are not valid real-speech run files: {{ real_invalid | join(", ") }}</div>{% endif %}
+  {% if not real_rows %}
+  <div class="card"><p class="muted" style="margin:0">No real-speech runs yet. Create one with <code>make realspeech-fetch</code> then <code>make realspeech</code>.</p></div>
+  {% else %}
+  <div class="card flush"><div class="table-wrap"><table class="rtable">
+  <thead><tr><th>run</th><th>ASR</th><th>language</th><th>data</th><th class="num">clips</th><th class="num">corpus WER</th><th class="num">detected hi</th><th class="num">loops</th></tr></thead>
+  <tbody>
+  {% for row in real_rows %}{% set m = row.run %}{% set s = row.s %}
+  <tr>
+    <td class="run full"><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+    <td class="nowrap" data-label="ASR">{{ m.asr_model }}</td>
+    <td data-label="language">{{ m.language_policy }}</td>
+    <td class="small kind full" data-label="data"><span class="tag">real speech</span> {{ m.dataset.name }} {{ m.dataset.config }}/{{ m.dataset.split }}
+      {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}</td>
+    <td class="num" data-label="clips">{{ s.n }}</td>
+    <td class="num" data-label="corpus WER">{{ ui.wer(s.corpus_wer, "%.3f") }}</td>
+    <td class="num" data-label="detected hi">{{ s.n_detected_hi }}/{{ s.n - s.errors }}</td>
+    <td class="num" data-label="loops">{{ s.repetition_loops }}</td>
+  </tr>
+  {% endfor %}
+  </tbody></table></div></div>
+  {% endif %}
+</section>
+
+<section class="section reveal" id="gnani" style="--i: 4">
+  <div class="section-head">
+    <div>
+      <h2>External API runs (Gnani)</h2>
+      <p class="muted small">Run files in <code>{{ gnani_dir }}</code>; see docs/GNANI_QA.md.</p>
+    </div>
+  </div>
+  <div class="banner"><b>Not part of the local benchmark, and not comparable with it.</b> These runs call Gnani.ai's remote, paid Prisma STT and Timbre TTS APIs on small subsets of the items. They are never merged with, averaged with or ranked against the local Whisper runs above.</div>
+  {% if gnani_invalid %}<div class="banner">Skipped files: {{ gnani_invalid | join(", ") }}</div>{% endif %}
+  {% if not gnani_rows and not gnani_real_rows %}
+  <div class="card"><p class="muted" style="margin:0">No external API runs.</p></div>
+  {% else %}
+  <div class="card flush"><div class="table-wrap"><table class="rtable">
+  <thead><tr><th>run</th><th>lane</th><th>system</th><th>language</th><th class="num">items</th><th class="num">task success</th><th class="num">corpus WER</th></tr></thead>
+  <tbody>
+  {% for row in gnani_rows %}{% set m = row.entry.manifest %}{% set o = row.overall %}
+  <tr>
+    <td class="run full"><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+    <td class="small kind full" data-label="lane"><span class="tag">external API</span> {% if row.lane == "roundtrip" %}TTS + STT round trip{% else %}synthetic audio{% endif %}</td>
+    <td class="nowrap" data-label="system">{{ m.asr_model }}<div class="small muted">understander {{ ui.understander(m.understander) }}</div></td>
+    <td data-label="language">{{ m.language_policy or "-" }}</td>
+    <td class="num" data-label="items">{{ o.n }}</td>
+    <td class="num" data-label="task success">{{ ui.ratio(o.task_success, o.n) }}</td>
+    <td class="num" data-label="corpus WER">{{ ui.wer(o.corpus_wer, "%.2f") }}</td>
+  </tr>
+  {% endfor %}
+  {% for row in gnani_real_rows %}{% set m = row.run %}{% set s = row.s %}
+  <tr>
+    <td class="run full"><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
+    <td class="small kind full" data-label="lane"><span class="tag">external API</span> real speech, {{ m.dataset.name }} {{ m.dataset.config }}</td>
+    <td class="nowrap" data-label="system">{{ m.asr_model }}</td>
+    <td data-label="language">{{ m.language_policy }}</td>
+    <td class="num" data-label="items">{{ s.n }}</td>
+    <td class="num" data-label="task success">-</td>
+    <td class="num" data-label="corpus WER">{{ ui.wer(s.corpus_wer, "%.3f") }}</td>
+  </tr>
+  {% endfor %}
+  </tbody></table></div></div>
+  {% endif %}
+</section>
 {% endblock %}
