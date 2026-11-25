@@ -1,0 +1,316 @@
+{
+ "model": "onnx-community/whisper-tiny",
+ "revision": "ff4177021cc41f7db950912b73ea4fdf7d01d8e7",
+ "dtype": "q8",
+ "device": "wasm",
+ "load_ms": 6419.375,
+ "language_mode": "auto",
+ "cpu_throttle": 1,
+ "browser": {
+  "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "cores": 4,
+  "coi": true
+ },
+ "clips": [
+  {
+   "clip_id": "10135688561274120767",
+   "reference": "इसे केमिकल का pH कहा जाता है. आप लाल गोभी के जूस का इस्तेमाल करके एक संकेतक बना सकते हैं.",
+   "transcript": "now lalgovi kju sq.m.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9637256347383448,
+   "total_ms": 2056.149999999907,
+   "audio_s": 8.22
+  },
+  {
+   "clip_id": "10245365873747218908",
+   "reference": "यह संबंधित है, लेकिन आम तौर पर इसमें अल्पाइन शैली की स्की टूरिंग या माउंटेनीयरिंग शामिल नहीं होती है, जिसे खड़े इलाकों में किया जाता है और जिसके लिए बहुत कड़ी स्की और बूट की ज़रूरत होती है.",
+   "transcript": "खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.902739024924979,
+   "total_ms": 17458.425000000047,
+   "audio_s": 13.68
+  },
+  {
+   "clip_id": "10590937942465254187",
+   "reference": "गंभीर मौसम किसी भी खतरनाक मौसमी घटना के लिए वर्गीय शब्द है जिसमें नुकसान, गंभीर सामाजिक व्यवधान, या मानव जीवन की हानि की संभावना है।",
+   "transcript": "gamir morsam keseeb kata na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na keseeb na kamsam keseeb na keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na keseeb na kamsam keseeb na kamsam keseeb na kamsam keseeb na kamsam k",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9498404030860297,
+   "total_ms": 16965.030000000028,
+   "audio_s": 10.5
+  },
+  {
+   "clip_id": "10980788482676060439",
+   "reference": "उन्होंने अफवाहों को “राजनीतिक बकवास और मूर्खतापूर्ण” कहा.",
+   "transcript": "I'm gonna fall for a magnetic ball ko sa mo kata ko.",
+   "error": null,
+   "language": "tl",
+   "language_prob": 0.23878850928944456,
+   "total_ms": 1957.6699999999255,
+   "audio_s": 4.08
+  },
+  {
+   "clip_id": "11014623647783711221",
+   "reference": "इंटरनेट, लोगों और अंतर-परस्पर संचार, दोनों के तत्वों को मिलाता है.",
+   "transcript": "internet logo & internet logo & internet logo",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9770244164724141,
+   "total_ms": 1591.7299999999814,
+   "audio_s": 5.46
+  },
+  {
+   "clip_id": "11099457867420986000",
+   "reference": "उनका सिंगापुर के उप-प्रधान मंत्री वोंग कान सेंग ने स्वागत किया और उन्होंने सिंगापुर के प्रधानमंत्री ली सिएन लूंग के साथ व्यापार और आतंकवाद के मामले पर बातचीत की.",
+   "transcript": "Un casinho porque usan un equipo en la historia.",
+   "error": null,
+   "language": "es",
+   "language_prob": 0.6194566150664005,
+   "total_ms": 1566.3850000000093,
+   "audio_s": 12.36
+  },
+  {
+   "clip_id": "11299735708347263843",
+   "reference": "1963 में बाँध बनने के बाद, मौसमी बाढ़ जो पूरे नदी में तलछट फैला देगी वह रुक गई थी.",
+   "transcript": "ایک از انا از انا از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از از",
+   "error": null,
+   "language": "ur",
+   "language_prob": 0.9569816542465913,
+   "total_ms": 16182,
+   "audio_s": 8.22
+  },
+  {
+   "clip_id": "11454315521519829761",
+   "reference": "बाद में उन्हें कैम्ब्रिज में एडेनब्रुक के अस्पताल में स्थानांतरित कर दिया गया.",
+   "transcript": "पाओ में के पाओ में के पाओ में पाओ में पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पाओ पा�",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.48789316337005684,
+   "total_ms": 15958.75,
+   "audio_s": 8.4
+  },
+  {
+   "clip_id": "11483002217487175688",
+   "reference": "तीसरी शताब्दी ईसा पूर्व में मिस्रियों द्वारा निर्मित, ग्रेट पिरामिड मृत फिरौन का सम्मान करने के लिए निर्मित कई बड़ी पिरामिड संरचनाओं में से एक है।",
+   "transcript": "3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-4名目, 3-",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.6354764645123369,
+   "total_ms": 15550.26000000001,
+   "audio_s": 12.24
+  },
+  {
+   "clip_id": "11534298179848099715",
+   "reference": "गंभीर मौसम किसी भी खतरनाक मौसमी घटना के लिए वर्गीय शब्द है जिसमें नुकसान, गंभीर सामाजिक व्यवधान, या मानव जीवन की हानि की संभावना है।",
+   "transcript": "खम्विए परना पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर पर",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.7900250758636542,
+   "total_ms": 15554.429999999935,
+   "audio_s": 10.8
+  },
+  {
+   "clip_id": "11887255676786903166",
+   "reference": "चीज़ों पर कुछ बनाकर या खरोंच कर इस जगह को नुक़सान न पहुँचाएँ.",
+   "transcript": "Gearsopar koch binakar, ya khanoch kar, this Jagay ko noxan na pohcai",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.35621569700119166,
+   "total_ms": 2153.880000000121,
+   "audio_s": 5.82
+  },
+  {
+   "clip_id": "12026665813540473757",
+   "reference": "इसलिए, यह माना जा रहा है कि नोटेशन को सिर्फ़ एक लेबल के रूप में जोड़ा गया था.",
+   "transcript": "So, this is the notation of a global group.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.7734489181834224,
+   "total_ms": 1382.5700000000652,
+   "audio_s": 6.36
+  },
+  {
+   "clip_id": "12095524946571612509",
+   "reference": "ऐसी कोई वैश्विक परिभाषा नहीं है जिसके लिए निर्मित सामान एंटीक होते हैं. कुछ कर एजेंसियाँ 100 साल से पुराने सामान को एंटीक के तौर पर परिभाषित करती हैं.",
+   "transcript": "poe vashwik bahashan is not in the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name of the name",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9213770057301329,
+   "total_ms": 15732.854999999981,
+   "audio_s": 14.94
+  },
+  {
+   "clip_id": "12503699152033832615",
+   "reference": "अटलांटिक तूफ़ान मौसम का दसवाँ तूफ़ान, उपोष्णकटिबंधीय तूफ़ान जेरी, आज अटलांटिक महासागर में बना है.",
+   "transcript": "Poison of the Dragon is a great honor to be here.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8279817540624117,
+   "total_ms": 1496.0449999999255,
+   "audio_s": 9.78
+  },
+  {
+   "clip_id": "12975824759916659",
+   "reference": "बेशक इस परंपरा के पीछे ईसाई धर्मशास्त्र के स्पष्टीकरण दिए जाते हैं, लेकिन एक प्री-क्रिश्चयन स्प्रिंग और फ़र्टिलिटी रस्म भी हो सकती है.",
+   "transcript": "ak ispearabarak pi 6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-6th-",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9040081231324021,
+   "total_ms": 15725.094999999972,
+   "audio_s": 12.84
+  },
+  {
+   "clip_id": "13003185437122223029",
+   "reference": "हालाँकि, लगभग रातों-रात इन योजनाओं को तब बनाया गया था जब सोवियत की यूनियन रेड आर्मी के 800,000 से ज़्यादा सैनिकों ने पोलैंड के पूर्वी क्षेत्रों पर हमला करने के बाद प्रवेश करते हुए बेलारूसी और यूक्रेनी मोर्चे खड़े कर दिए थे. उन्होंने यह रिगा शांति संधि, द सोवियत-पॉलिश नॉन-एग्रेशन पैक्ट और अन्य अंतरराष्ट्रीय द्विपक्षीय और बहुपक्षीय दोनों तरह की संधियों का उल्लंघन करते हुए किया था.",
+   "transcript": "Halankhi lagwa gratu rat in yojnao kutta banaaayi gayaat. Soviet's union radar meek e. Art Laksis yada, Seni Kuni Pollan's Purvik Shetrover Hamlakar neke bad, pravish karthi vay, Belar Ussi & Jukrini Murcik Karikar diyaethe. Unni yeri ga shanti Sandi, that's ovit polish non-aggression. In fact, and in anti-rashshari dvpakshi and Bahu pakshi dunutarakis Sandi, kaul langgan karthi vay ki atta.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.7816272168776079,
+   "total_ms": 5934.699999999953,
+   "audio_s": 31.44
+  },
+  {
+   "clip_id": "13109433266350566952",
+   "reference": "अलगाव और पुनर्संयोजन भिन्नता प्रत्येक पीढ़ी के साथ दो पूलों के बीच आगे-पीछे होती रहती है।",
+   "transcript": "Welcome all winners of the new year.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8958338987509242,
+   "total_ms": 1388.780000000028,
+   "audio_s": 10.08
+  },
+  {
+   "clip_id": "13327907168028106279",
+   "reference": "1889 में यह बंदरगाह कुख्यात नौसैनिक गतिरोध का ठिकाना था उस समय जर्मनी, अमेरिका और ब्रिटेन के सात जहाजों ने इस बंदरगाह से जाने से इनकार कर दिया था.",
+   "transcript": "Achara Sopu naasi meinya banderga ka kya tnoo se ni. Gati roth ka tikana tha u samal jermani amerika aur biltern ka sath jahajone is banderga se jani se in kar kar diya tha.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8160664933107014,
+   "total_ms": 3004.8299999998417,
+   "audio_s": 12.06
+  },
+  {
+   "clip_id": "13563417804047448798",
+   "reference": "यह शहर, अफ़्रीका के कुछ सबसे सस्ते पहाड़ी गोरिल्ला ट्रेकिंग के साथ ही नायरागोंगो ज्वालामुखी की चढ़ाई करने का बेस भी है.",
+   "transcript": "yo shrfree ka kuk satsas thai pari gore latrking keseat hih naharav wongo jojala muk hih kicharai kar ne ka base bhi hai",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8172788716442424,
+   "total_ms": 2611.4250000000466,
+   "audio_s": 10.2
+  },
+  {
+   "clip_id": "1389858613705387489",
+   "reference": "आप गोमा के आस-पास घूमने के लिए बोडा-बोडा (मोटरसाइकिल टैक्सी) ले सकते हैं. छोटी सैर के लिए आम तौर पर (स्थानीय) किराया करीब 500 कांगोलीज़ फ़्रैंक लगता है.",
+   "transcript": "खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप खाप",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9395550080283872,
+   "total_ms": 16224.280000000028,
+   "audio_s": 14.64
+  },
+  {
+   "clip_id": "14211299707514072668",
+   "reference": "तुर्की के राष्ट्रपति रजब तैयब इरदुगान के साथ ट्रंप की फ़ोन पर चर्चा होने के बाद घोषणा की गई थी.",
+   "transcript": "Durkichi Kerash Pati Rajap Rajap Rajap Durkhevaan Kshad Ram Kifon Perchurcha, he is a very fortunate kigeyathi.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.5455114167601955,
+   "total_ms": 2875.9599999999627,
+   "audio_s": 10.62
+  },
+  {
+   "clip_id": "14283252976422276726",
+   "reference": "उत्तर की ओर के बड़े क्षेत्र में आबादी बहुत ही कम है और कुछ इलाकों में तो लगभग कोई इंसानी आबादी नहीं है.",
+   "transcript": "уttar ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki oud ki",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.6437903801120126,
+   "total_ms": 15422.719999999972,
+   "audio_s": 7.62
+  },
+  {
+   "clip_id": "14578853254924901868",
+   "reference": "कंफेडेरशन के अनुच्छेद के तहत क्रांतिकारी युद्ध के दौरान, तेरह राज्यों ने पहली बार एक कमजोर केंद्रीय सरकार का गठन किया जिसमें कांग्रेस इसका एकमात्र घटक थी.",
+   "transcript": "Congratulations on the amazing amazing talent in the field of the country.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8720066369213103,
+   "total_ms": 1654.0150000001304,
+   "audio_s": 14.04
+  },
+  {
+   "clip_id": "14706914212578682198",
+   "reference": "लूना को साथी पहलवानों ने भी श्रद्धांजलि दी.",
+   "transcript": "l'una cosa ti pervano ne vi strattange lì di",
+   "error": null,
+   "language": "it",
+   "language_prob": 0.72669126181586,
+   "total_ms": 1512.9600000001956,
+   "audio_s": 4.74
+  },
+  {
+   "clip_id": "15102900664499962233",
+   "reference": "विशेष रूप से, यह दावा किया जाता है कि किसी व्यक्ति की सूक्ष्म अभिव्यक्तियों की सही व्याख्या करके यह समझा सकता है कि वह झूठ बोल रहा है या नहीं।",
+   "transcript": "Vise Rupjaya dava kya jata hai ki ki suksnabhivya ki ok ki sahi vya kya kar ne kar kya saam jata hai ki vya jout bho raha hai ya ne",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9599167536962383,
+   "total_ms": 2423.8499999998603,
+   "audio_s": 10.2
+  },
+  {
+   "clip_id": "15449373665420679878",
+   "reference": "ब्लॉगिंग एक ऐसा टूल है जो सहयोग को प्रेरित करता है, और छात्रों को पारंपरिक स्कूल के दिन से बेहतर सीखने के लिए प्रोत्साहित करता है.",
+   "transcript": "blogging is a tool, which is a job to operate with the same tool and the main tool is to make a good signal for the people.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9374888902387689,
+   "total_ms": 1980.594999999972,
+   "audio_s": 10.26
+  },
+  {
+   "clip_id": "15862862082216857049",
+   "reference": "तुर्की के राष्ट्रपति रजब तैयब इरदुगान के साथ ट्रंप की फ़ोन पर चर्चा होने के बाद घोषणा की गई थी.",
+   "transcript": "2. Rastri paati Rajap thayya bha irtu ghan kese 7-7-3 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 7-3 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 7-3 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-4 kese 4-",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8545364199883996,
+   "total_ms": 15400.524999999907,
+   "audio_s": 11.34
+  },
+  {
+   "clip_id": "15964620684926881659",
+   "reference": "पुरुषों को दृढ़ता से नकारें और अपनी बात पर बेहिचक अड़ी रहें (सांस्कृतिक अंतरों के होने या नहीं होने से यह सही नहीं हो जाता!).",
+   "transcript": "Pooruso kardirathas sinakari, and apni bhaad par pehichakari rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi rahi",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9157741189816189,
+   "total_ms": 15065.889999999898,
+   "audio_s": 12.18
+  },
+  {
+   "clip_id": "1599033818694102662",
+   "reference": "लक्खा सिंह ने छप्पन भोग भजन भी प्रस्तुत किया। गायक, राजू खंडेलवाल उनके साथ थे।",
+   "transcript": "Laxaxing ne chaapan bohujan vi prasud kya.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9355433567198368,
+   "total_ms": 1697.1200000001118,
+   "audio_s": 7.44
+  },
+  {
+   "clip_id": "16422572156854030189",
+   "reference": "1963 में बाँध बनने के बाद, मौसमी बाढ़ जो पूरे नदी में तलछट फैला देगी वह रुक गई थी.",
+   "transcript": "On this third set main plant, Vannighe Badmashmi Bharju, Kura Nadim with the project fellow.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.5933700976672295,
+   "total_ms": 1877.2450000001118,
+   "audio_s": 8.64
+  }
+ ]
+}

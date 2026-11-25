@@ -40,7 +40,7 @@
       <p class="muted">Whisper runs in your browser with transformers.js (onnxruntime-web). The transcript then goes through this project's own intent / slot matcher and WER code on the server.</p>
     </div>
   </div>
-  <div class="banner info reveal"><b>This is a fresh run, not the stored baseline.</b> The console uses OpenAI Whisper weights converted to ONNX (q8) and run by onnxruntime-web in your browser. The benchmark's stored runs used faster-whisper (CTranslate2, int8) on a server CPU, so a live result is a new measurement on your device. It never replaces the stored {% if fa %}{{ fa.matrix.all.all.ok }}/{{ fa.matrix.all.all.n }}{% endif %} baseline. <b>Expect weak Hindi accuracy from tiny and base.</b> Even the stored small baseline passes {% if fa %}{{ fa.matrix.hi.all.ok }}/{{ fa.matrix.hi.all.n }}{% else %}few{% endif %} Hindi scenarios with auto-detect (see the README's "What failed").</div>
+  <div class="banner info reveal"><b>This is a fresh run, not the stored baseline.</b> The console uses OpenAI Whisper weights converted to ONNX (q8) and run by onnxruntime-web in your browser. The benchmark's stored runs used faster-whisper (CTranslate2, int8) on a server CPU, so a live result is a new measurement on your device. It never replaces the stored {% if fa %}{{ fa.matrix.all.all.ok }}/{{ fa.matrix.all.all.n }}{% endif %} baseline. <b>Expect weak Hindi accuracy from tiny and base.</b> Even the stored small baseline passes {% if fa %}{{ fa.matrix.hi.all.ok }}/{{ fa.matrix.hi.all.n }}{% else %}few{% endif %} Hindi scenarios with auto-detect (see the README's "What failed"){% if browser_meas %}{% set brows = browser_meas.rows | selectattr("load_ms") | list %}{% if brows and (brows | selectattr("corpus_wer", "gt", 1) | list | length) == brows | length %}, and on {{ brows[0].n }} human Hindi clips every browser model measured here had a corpus WER above 1 (table below the console){% endif %}{% endif %}.</div>
 
   <div class="console reveal" style="--i: 1" id="console" data-models="{{ live_models|tojson|forceescape }}" data-tjs="{{ transformers_js }}" data-max-chars="{{ max_text_chars }}">
     <noscript><div class="error-box"><b>JavaScript is off.</b> The live console needs JavaScript to run Whisper in your browser. The benchmark results below work without it.</div></noscript>
@@ -121,6 +121,19 @@
         </div>
       </div>
     </div>
+    {% if browser_meas %}
+    <details class="measured">
+      <summary>Measured: these browser models on {{ browser_meas.rows[0].n }} human Hindi clips</summary>
+      <p class="small muted">Headless Chromium, WASM on 4 CPU cores, auto-detect, the first {{ browser_meas.rows[0].n }} clips (sorted) of the FLEURS hi_in dev split; WER from <code>voicebench.metrics.corpus_wer</code>. Results file: <code>results/browser-whisper/</code>. Your device will differ.</p>
+      <div class="table-wrap"><table class="rtable">
+        <thead><tr><th>system</th><th class="num">corpus WER</th><th class="num">detected hi</th><th class="num">repetition loops</th><th class="num">p50 / p95 time</th></tr></thead>
+        <tbody>{% for r in browser_meas.rows %}
+          <tr><td class="full small">{{ r.system }}</td><td class="num" data-label="corpus WER">{{ "%.3f"|format(r.corpus_wer) }}</td><td class="num" data-label="detected hi">{{ r.detected_hi }}/{{ r.n - r.errors }}</td><td class="num" data-label="loops">{{ r.loops }}</td><td class="num" data-label="p50 / p95">{{ "%.1f"|format(r.p50_ms / 1000) }} / {{ "%.1f"|format(r.p95_ms / 1000) }} s</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+      <p class="legend">WER above 1 means the model added more words than the reference has, mostly through repetition loops. The last row is the stored benchmark run on the same clips, on a server CPU.</p>
+    </details>
+    {% endif %}
     <div class="privacy">
       <div><b>Audio stays in your browser</b>Audio is processed in your browser and never uploaded.</div>
       <div><b>Text goes to /api/analyze</b>The resulting text transcript (and the reference sentence, if you type one) is sent to this site's /api/analyze for intent, slots and WER. It is not stored or logged by us.</div>

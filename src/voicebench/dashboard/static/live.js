@@ -158,9 +158,11 @@ function init() {
       if (data.file && data.total) st.loading.files.set(data.file, { loaded: data.loaded || 0, total: data.total });
       let loaded = 0, total = 0;
       for (const f of st.loading.files.values()) { loaded += f.loaded; total += f.total; }
-      if (total) {
+      if (total >= 1e6) {
         $("load-progress").firstElementChild.style.width = `${Math.min(100, (100 * loaded) / total).toFixed(1)}%`;
         setStatus($("load-status"), `Downloading or reading cache: ${mb(loaded)} of ${mb(total)}`, true);
+      } else {
+        setStatus($("load-status"), "Downloading model files…", true);
       }
     } else if (data.type === "notice") {
       st.notice = data.message;

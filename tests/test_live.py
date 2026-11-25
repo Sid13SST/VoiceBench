@@ -128,3 +128,13 @@ def test_isolation_headers_and_static_assets(client):
     assert r.headers["cross-origin-embedder-policy"] == "credentialless"
     for f in ("site.css", "site.js", "live.js", "asr-worker.js"):
         assert client.get(f"/static/{f}").status_code == 200
+
+
+def test_measured_browser_models_come_from_the_committed_results(client):
+    rows = json.loads((ROOT / "results" / "browser-whisper" / "summary.json").read_text(encoding="utf-8"))["rows"]
+    html = client.get("/").text
+    for r in rows:
+        assert "%.3f" % r["corpus_wer"] in html
+    browser = [r for r in rows if r["load_ms"]]
+    claims_all_over_1 = "every browser model measured here had a corpus WER above 1" in html
+    assert claims_all_over_1 == all(r["corpus_wer"] > 1 for r in browser)

@@ -6,6 +6,7 @@ writes to the results directory.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Optional
@@ -140,6 +141,13 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
         gnani_invalid += gnani_real.invalid
         featured = _featured()
         hero_clip = audio_dir / "v1-001.wav"
+        browser_meas = None
+        meas_file = store.repo_root / "results" / "browser-whisper" / "summary.json"
+        if meas_file.is_file():
+            try:
+                browser_meas = json.loads(meas_file.read_text(encoding="utf-8"))
+            except ValueError:
+                browser_meas = None
         return TEMPLATES.TemplateResponse(
             request,
             "index.html",
@@ -147,7 +155,7 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
              "max_text_chars": MAX_TEXT_CHARS, "languages": LANGUAGES, "conditions": CONDITIONS,
              "hero_peaks": wav_peaks(hero_clip) if hero_clip.is_file() else [],
              "hero": next((s for v in featured.values() for s in v["scenarios"] if s.id == "v1-001"), None),
-             "real_featured": _real_featured(real.runs()),
+             "real_featured": _real_featured(real.runs()), "browser_meas": browser_meas,
              "rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": _shown(store.results_dir),
              "real_rows": [{"run": r, "s": summarise_realspeech(r)} for r in real.runs()],
              "real_invalid": real.invalid, "real_dir": _shown(real.directory),
