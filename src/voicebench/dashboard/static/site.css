@@ -257,8 +257,11 @@ canvas.scope { display: block; width: 100%; height: 64px; background: var(--bg-r
 @keyframes rise { from { transform: scaleY(0); } }
 .js .reveal:not(.in) .cell::before { animation-play-state: paused; }
 .hbars { display: grid; gap: 10px; }
+/* Failure explorer: summary beside the case list on wide screens, stacked above it from 700 px down. */
+.fail-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 12px; align-items: start; }
+.fail-grid > .card { margin-top: 0; }
 .hbar { display: grid; grid-template-columns: minmax(110px, 160px) minmax(0, 1fr) 40px; align-items: center; gap: 12px; font-size: 13px; }
-.hbar .k { color: var(--text-2); overflow-wrap: anywhere; }
+.hbar .k { color: var(--text-2); overflow-wrap: break-word; font-family: var(--mono); font-size: 12.5px; }
 .hbar .t { display: block; height: 10px; background: var(--track); border-radius: 999px; overflow: hidden; }
 .hbar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, rgba(46, 196, 182, .5), var(--accent)); transform-origin: left; animation: grow 1s var(--ease) both; animation-delay: .25s; }
 .hbar.bad i { background: linear-gradient(90deg, rgba(242, 144, 138, .45), var(--bad)); }
@@ -274,7 +277,7 @@ canvas.scope { display: block; width: 100%; height: 64px; background: var(--bg-r
 .fail .id { font: 500 13px/1 var(--mono); }
 .fail dl { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 4px 10px; margin: 0; font-size: 13px; }
 .fail dt { color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding-top: 2px; }
-.fail dd { margin: 0; overflow-wrap: anywhere; color: var(--text-2); }
+.fail dd { margin: 0; overflow-wrap: break-word; color: var(--text-2); min-width: 0; }
 .fail dd.hyp { color: var(--text); }
 .filters-inline { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .filters-inline select { width: auto; flex: 1 1 140px; }
@@ -372,8 +375,15 @@ audio { display: block; width: 100%; max-width: 420px; height: 36px; margin-top:
   table.kv th { padding-top: 12px; font-size: 12.5px; color: var(--text-3); }
   table.kv td { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
   table.kv tr:last-child td { border-bottom: 0; }
-  .hbar { grid-template-columns: minmax(0, 1fr) 36px; }
+  .hbar { grid-template-columns: minmax(0, 1fr) 36px; gap: 4px 12px; }
   .hbar .t { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 700px) {
+  .fail-grid { grid-template-columns: minmax(0, 1fr); }
+  .fail-list { grid-template-columns: minmax(0, 1fr); }
+  .fail dl { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .fail dt { padding-top: 8px; }
+  .fail dt:first-child { padding-top: 0; }
 }
 @media (max-width: 560px) {
   .case { padding: 14px; }

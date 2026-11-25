@@ -145,3 +145,8 @@ def test_console_defaults_to_wasm_and_labels_webgpu_experimental(client):
     select = html.split('<select id="backend">', 1)[1].split("</select>", 1)[0]
     assert select.index('value="wasm" selected') < select.index('value="webgpu"')
     assert "WebGPU (experimental)" in select and "auto" not in select.lower()
+
+
+def test_no_inline_grid_columns_on_the_home_page(client):
+    # An inline grid-template-columns beats the stylesheet's mobile rules and squeezes columns at 390 px.
+    assert "grid-template-columns" not in client.get("/").text

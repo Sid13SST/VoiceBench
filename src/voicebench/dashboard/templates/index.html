@@ -223,7 +223,7 @@
   </div>
   {% for policy, v in featured.items() %}
   <div class="tabpanel" data-panel="{{ policy }}" {% if fa and policy != "auto" %}hidden{% endif %}>
-    <div class="grid-2" style="grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr)">
+    <div class="fail-grid">
       <div class="card reveal">
         <h3>{{ v.failures|length }} of {{ v.matrix.all.all.n }} scenarios failed <span class="muted small">({{ policy }})</span></h3>
         <div class="hbars" style="margin-top:16px">
