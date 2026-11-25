@@ -2,7 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "app.py": {
-      "excludeFiles": "{tests/**,docs/**,.github/**,.venv/**,.cache/**,**/__pycache__/**,results/gnani/**/*.wav}"
+      "excludeFiles": "{tests/**,docs/**,.github/**,.venv/**,.cache/**,**/__pycache__/**,results/gnani/**/*.wav,tools/**}"
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        { "key": "Cross-Origin-Embedder-Policy", "value": "credentialless" }
+      ]
+    }
+  ]
 }

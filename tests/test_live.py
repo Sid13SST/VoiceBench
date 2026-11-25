@@ -1,4 +1,4 @@
-"""The live console's server side: /api/analyze (text only) and /api/clips."""
+"""The live console's server side: /api/analyze (text only), /api/clips and the page wiring."""
 
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from conftest import make_scenario
-from voicebench.dashboard.app import create_app
+from voicebench.dashboard.app import LIVE_MODELS, create_app
 from voicebench.dashboard.live import MAX_BODY_BYTES, MAX_TEXT_CHARS, AnalyzeRequest, analyze, wav_peaks
 from voicebench.metrics import wer
 from voicebench.nlu.matcher import match
@@ -109,3 +109,22 @@ def test_api_clips_carries_the_stored_baseline(client):
         assert c["audio"] == f"/audio/{c['id']}.wav"
         assert c["baseline"]["auto"]["transcript"] == stored[c["id"]]["transcript"]
         assert c["baseline"]["auto"]["task_success"] == stored[c["id"]]["task_success"]
+
+
+def test_home_page_has_the_console_first_and_honest_labels(client):
+    html = client.get("/").text
+    assert html.index('id="live"') < html.index('id="results"') < html.index('id="synthetic"') < html.index('id="realspeech"')
+    assert "Audio is processed in your browser and never uploaded" in html
+    assert "is sent to this site's /api/analyze" in html and "not stored or logged by us" in html
+    assert "nothing leaves your device" not in html.lower() and "unlimited" not in html.lower()
+    assert "not the stored baseline" in html and "weak Hindi accuracy" in html
+    for m in LIVE_MODELS:
+        assert m["revision"] in html  # the exact revision the browser loads
+
+
+def test_isolation_headers_and_static_assets(client):
+    r = client.get("/")
+    assert r.headers["cross-origin-opener-policy"] == "same-origin"
+    assert r.headers["cross-origin-embedder-policy"] == "credentialless"
+    for f in ("site.css", "site.js", "live.js", "asr-worker.js"):
+        assert client.get(f"/static/{f}").status_code == 200

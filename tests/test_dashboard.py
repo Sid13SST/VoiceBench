@@ -1,6 +1,7 @@
 """Dashboard tests. Runs built here are fixtures; the real runs in results/ are only read."""
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -231,8 +232,13 @@ def test_hostile_understander_name_is_escaped(fixture_repo, tmp_path):
     _write_run(tmp_path, m.model_copy(update={"run_id": "hostile-run", "understander": HOSTILE}))
     escaped = "&lt;script&gt;alert(1)&lt;/script&gt;"
     for page in (client.get("/").text, client.get("/runs/hostile-run").text):
-        assert HOSTILE not in page and "<script" not in page
-        assert escaped in page
+        assert HOSTILE not in page and escaped in page
+        # The only scripts are the site's own static modules, with no inline code.
+        tags = re.findall(r"<script\b[^>]*>(.*?)</script>", page, flags=re.S)
+        assert re.findall(r"<script\b", page).__len__() == len(tags)
+        assert all(body == "" for body in tags)
+        assert set(re.findall(r"<script\b([^>]*)>", page)) <= {
+            ' type="module" src="/static/site.js"', ' type="module" src="/static/live.js"'}
     assert {r["run_id"]: r for r in client.get("/api/runs").json()}["hostile-run"]["understander"] == HOSTILE
 
 

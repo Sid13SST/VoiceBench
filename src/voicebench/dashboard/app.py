@@ -12,6 +12,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
@@ -23,16 +24,34 @@ from voicebench.dashboard.data import (
     RunUnusable,
     case_rows,
     featured_runs,
+    featured_view,
     matrix,
     run_overview,
 )
-from voicebench.dashboard.live import MAX_BODY_BYTES, AnalyzeRequest, analyze
+from voicebench.dashboard.live import MAX_BODY_BYTES, MAX_TEXT_CHARS, AnalyzeRequest, analyze, wav_peaks
 from voicebench.dashboard.data import word_diff
 from voicebench.gnani import COMPARABILITY, external_provider
 from voicebench.realspeech import clip_category, summarise_realspeech, word_error_breakdown
 from voicebench.understanding import BUILTIN
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+STATIC_DIR = Path(__file__).parent / "static"
+# The live console's Whisper models: the exact Hugging Face repo and commit the browser loads,
+# file sizes of the q8 ("quantized") encoder + merged decoder, and the licence as each model card
+# states it (checked on the cards: the tiny and small ONNX cards declare none; their upstream
+# openai/whisper-* weights are Apache-2.0).
+LIVE_MODELS = [
+    {"key": "tiny", "repo": "onnx-community/whisper-tiny", "revision": "ff4177021cc41f7db950912b73ea4fdf7d01d8e7",
+     "mb": 40.8, "card_license": None, "upstream": "openai/whisper-tiny",
+     "upstream_revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af"},
+    {"key": "base", "repo": "onnx-community/whisper-base", "revision": "27a07b4b52b3a4c5886134bb4320e93e1a4bbc7c",
+     "mb": 76.9, "card_license": "apache-2.0", "upstream": "openai/whisper-base",
+     "upstream_revision": "e37978b90ca9030d5170a5c07aadb050351a65bb"},
+    {"key": "small", "repo": "onnx-community/whisper-small", "revision": "36050c46d777d46dc4b5f43f6d90574fc38f8732",
+     "mb": 249.1, "card_license": None, "upstream": "openai/whisper-small",
+     "upstream_revision": "973afd24965f72e36ca33b3055d56a652f456b4d"},
+]
+TRANSFORMERS_JS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/dist/transformers.min.js"
 SCENARIO_ID_RE = re.compile(r"^v\d+-\d{3}$")
 
 
@@ -49,6 +68,27 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
     gnani_real = RealSpeechStore(gnani / "realspeech")
     audio_dir = Path(audio_dir)
     app = FastAPI(title="VoiceBench", docs_url="/api/docs", redoc_url=None)
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+    @app.middleware("http")
+    async def isolation_headers(request: Request, call_next):
+        # Cross-origin isolation lets onnxruntime-web use WASM threads in the live console.
+        # "credentialless" keeps no-CORS cross-origin loads (Google Fonts) working.
+        response = await call_next(request)
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        response.headers.setdefault("Cross-Origin-Embedder-Policy", "credentialless")
+        return response
+
+    def _featured():
+        """{policy: featured_view} for the stored baseline runs that can be shown."""
+        out = {}
+        for policy, e in featured_runs(store).items():
+            try:
+                out[policy] = featured_view(e, store)
+            except RunUnusable:
+                continue
+        return out
+
     def _find(run_id: str):
         """(entry, the store it is in, its Gnani lane or None)."""
         entry = store.get(run_id)
@@ -98,15 +138,29 @@ def create_app(results_dir: str | Path = "results", audio_dir: str | Path = "aud
             gnani_invalid += s.invalid
         gnani_real_rows = [{"run": r, "s": summarise_realspeech(r)} for r in gnani_real.runs()]
         gnani_invalid += gnani_real.invalid
+        featured = _featured()
+        hero_clip = audio_dir / "v1-001.wav"
         return TEMPLATES.TemplateResponse(
             request,
             "index.html",
-            {"rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": _shown(store.results_dir),
+            {"featured": featured, "live_models": LIVE_MODELS, "transformers_js": TRANSFORMERS_JS,
+             "max_text_chars": MAX_TEXT_CHARS, "languages": LANGUAGES, "conditions": CONDITIONS,
+             "hero_peaks": wav_peaks(hero_clip) if hero_clip.is_file() else [],
+             "hero": next((s for v in featured.values() for s in v["scenarios"] if s.id == "v1-001"), None),
+             "real_featured": _real_featured(real.runs()),
+             "rows": rows, "invalid": store.invalid, "unusable": unusable, "results_dir": _shown(store.results_dir),
              "real_rows": [{"run": r, "s": summarise_realspeech(r)} for r in real.runs()],
              "real_invalid": real.invalid, "real_dir": _shown(real.directory),
              "gnani_rows": gnani_rows, "gnani_real_rows": gnani_real_rows, "gnani_invalid": gnani_invalid,
              "gnani_dir": _shown(gnani)},
         )
+
+    def _real_featured(runs):
+        """Newest real-speech run per language policy, for the lane's headline cards."""
+        out = {}
+        for r in runs:
+            out.setdefault(r.language_policy, {"run": r, "s": summarise_realspeech(r)})
+        return out
 
     @app.get("/api/clips")
     def api_clips():

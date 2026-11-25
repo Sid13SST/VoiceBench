@@ -1,21 +1,255 @@
 {% extends "base.html" %}
 {% import "macros.html" as ui %}
+{% block head %}<script type="module" src="/static/live.js"></script>{% endblock %}
 {% block body %}
-<section class="hero reveal">
-  <span class="eyebrow"><span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Regression lab · en / hi / hinglish</span>
-  <h1>Voice<span class="accent">Bench</span></h1>
-  <p class="lede">A voice-understanding regression lab for <b>English, Hindi and Hinglish</b> voice agents.<br>
-  Each run sends the same 50 synthetic caller scenarios (clean, noisy, interrupted) through ASR and intent / slot matching, and scores WER and task success.</p>
-  <div class="stats">
-    <a class="stat reveal" style="--i: 1" href="#synthetic"><span class="v">{{ rows|length }}</span><span class="l">synthetic benchmark runs</span></a>
-    <a class="stat reveal" style="--i: 2" href="#realspeech"><span class="v">{{ real_rows|length }}</span><span class="l">real-speech runs (separate lane)</span></a>
-    <a class="stat reveal" style="--i: 3" href="#gnani"><span class="v">{{ gnani_rows|length + gnani_real_rows|length }}</span><span class="l">external API runs (not comparable)</span></a>
+{% set fa = featured.get("auto") %}{% set fh = featured.get("hint") %}{% set base_view = fa or fh %}
+{% set ra = real_featured.get("auto") %}
+<section class="hero">
+  <div class="reveal">
+    <span class="eyebrow">Regression lab · en / hi / hinglish</span>
+    <h1>Voice<span class="accent">Bench</span></h1>
+    <p class="lede">A voice-understanding regression lab for <b>English, Hindi and Hinglish</b> voice agents.<br>
+    50 synthetic caller scenarios (clean, noisy, interrupted) go through ASR and intent / slot matching, and every run is scored on WER and task success.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#live">Test it live in your browser</a>
+      <a class="btn" href="#results">See the benchmark results</a>
+    </div>
+  </div>
+  {% if hero_peaks %}
+  <figure class="wave-card reveal" style="--i: 2; margin: 0" aria-label="Waveform of benchmark clip {{ hero.id if hero else 'v1-001' }}">
+    <figcaption class="cap"><span>benchmark clip <b>{{ hero.id if hero else "v1-001" }}</b>{% if hero %} · {{ hero.language.value }} · {{ hero.condition.value }}{% endif %}</span><span>espeak-ng synthetic audio</span></figcaption>
+    <div class="wave-wrap"><div class="wave" aria-hidden="true">{% for p in hero_peaks %}<i class="{{ 'on' if p > 0.02 else '' }}" style="height: {{ [p * 100, 3]|max|round(1) }}%; --k: {{ loop.index0 }}"></i>{% endfor %}</div>
+    <span class="playhead" aria-hidden="true"></span></div>
+    {% if hero %}<p class="ref">“{{ hero.reference }}” <span class="muted tiny">expected intent <code>{{ hero.expected_intent }}</code></span></p>{% endif %}
+  </figure>
+  {% endif %}
+</section>
+<div class="stats">
+  <a class="stat reveal" style="--i: 1" href="#results"><span class="v" data-count="50">50</span><span class="l">caller scenarios in 3 languages × 3 conditions</span></a>
+  {% if fa %}{% set o = fa.matrix.all.all %}<a class="stat reveal" style="--i: 2" href="#results"><span class="v"><span data-count="{{ o.ok }}">{{ o.ok }}</span><small>/{{ o.n }}</small></span><span class="l">task success, stored baseline (faster-whisper small, auto)</span></a>{% endif %}
+  {% if ra %}<a class="stat reveal" style="--i: 3" href="#realspeech"><span class="v" data-count="{{ '%.3f'|format(ra.s.corpus_wer) if ra.s.corpus_wer is not none else '' }}">{{ "%.3f"|format(ra.s.corpus_wer) if ra.s.corpus_wer is not none else "-" }}</span><span class="l">corpus WER on {{ ra.s.n }} human Hindi clips (separate lane)</span></a>{% endif %}
+  <a class="stat reveal" style="--i: 4" href="#synthetic"><span class="v" data-count="{{ rows|length + real_rows|length + gnani_rows|length + gnani_real_rows|length }}">{{ rows|length + real_rows|length + gnani_rows|length + gnani_real_rows|length }}</span><span class="l">committed run files</span></a>
+</div>
+
+{# ------------------------------------------------------------------ live console #}
+<section class="section" id="live">
+  <div class="section-head reveal">
+    <div>
+      <span class="eyebrow"><span class="num">01</span> Live test console</span>
+      <h2>Speak, upload or replay a clip, and score it live</h2>
+      <p class="muted">Whisper runs in your browser with transformers.js (onnxruntime-web). The transcript then goes through this project's own intent / slot matcher and WER code on the server.</p>
+    </div>
+  </div>
+  <div class="banner info reveal"><b>This is a fresh run, not the stored baseline.</b> The console uses OpenAI Whisper weights converted to ONNX (q8) and run by onnxruntime-web in your browser. The benchmark's stored runs used faster-whisper (CTranslate2, int8) on a server CPU, so a live result is a new measurement on your device. It never replaces the stored {% if fa %}{{ fa.matrix.all.all.ok }}/{{ fa.matrix.all.all.n }}{% endif %} baseline. <b>Expect weak Hindi accuracy from tiny and base.</b> Even the stored small baseline passes {% if fa %}{{ fa.matrix.hi.all.ok }}/{{ fa.matrix.hi.all.n }}{% else %}few{% endif %} Hindi scenarios with auto-detect (see the README's "What failed").</div>
+
+  <div class="console reveal" style="--i: 1" id="console" data-models="{{ live_models|tojson|forceescape }}" data-tjs="{{ transformers_js }}" data-max-chars="{{ max_text_chars }}">
+    <noscript><div class="error-box"><b>JavaScript is off.</b> The live console needs JavaScript to run Whisper in your browser. The benchmark results below work without it.</div></noscript>
+    <div class="console-grid">
+      <div>
+        <p class="step"><span class="n">1</span> Model</p>
+        <div class="seg" role="group" aria-label="Whisper model" id="model-seg">
+          {% for m in live_models %}<button type="button" data-model="{{ m.key }}" aria-pressed="{{ 'true' if m.key == 'base' else 'false' }}">whisper-{{ m.key }} <span class="muted tiny">{{ m.mb|round|int }} MB</span></button>{% endfor %}
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label class="field">Backend<select id="backend"><option value="auto">Auto: WebGPU if available, else WASM</option><option value="wasm">WASM (CPU) only</option></select></label>
+        </div>
+        <div class="model-meta" id="model-meta" aria-live="polite"></div>
+        <div class="row" style="margin-top:12px">
+          <button type="button" class="btn primary" id="load-btn">Load model</button>
+          <button type="button" class="btn ghost" id="clear-cache-btn" title="Delete downloaded model files from this browser">Clear cached models</button>
+        </div>
+        <span class="progress" id="load-progress" hidden><span></span></span>
+        <div class="status-line" id="load-status" aria-live="polite"></div>
+
+        <p class="step" style="margin-top:22px"><span class="n">2</span> Audio <span class="muted tiny" style="text-transform:none;letter-spacing:0;font-weight:400">max 30 s · 10 MB</span></p>
+        <div class="inputs">
+          <div class="input-tile">
+            <h4>Microphone</h4>
+            <p>Record up to 30 s.</p>
+            <button type="button" class="btn" id="rec-btn"><span class="dot" aria-hidden="true"></span><span>Record</span></button>
+            <span class="level" aria-hidden="true"><span id="rec-level"></span></span>
+            <span class="timer" id="rec-timer" aria-live="off">0.0 s</span>
+          </div>
+          <div class="input-tile">
+            <h4>Upload a file</h4>
+            <p>wav, mp3, m4a or webm.</p>
+            <label class="btn drop">Choose file<input type="file" id="file-input" accept=".wav,.mp3,.m4a,.webm,.ogg,audio/wav,audio/mpeg,audio/mp4,audio/webm,audio/ogg"></label>
+          </div>
+          <div class="input-tile">
+            <h4>Benchmark clip</h4>
+            <select id="clip-select" aria-label="Benchmark clip"><option value="">loading clips…</option></select>
+            <button type="button" class="btn" id="clip-btn">Run this clip live</button>
+          </div>
+        </div>
+        <canvas class="scope" id="scope" width="800" height="128" style="margin-top:12px" aria-label="Waveform of the selected audio"></canvas>
+        <div class="status-line" id="audio-info" aria-live="polite"><span class="muted">No audio selected yet.</span></div>
+        <audio id="audio-preview" controls hidden></audio>
+      </div>
+
+      <div>
+        <p class="step"><span class="n">3</span> Settings</p>
+        <div class="row">
+          <label class="field">Language<select id="lang"><option value="auto">Auto-detect</option><option value="hi">Hindi hint</option><option value="en">English hint</option></select></label>
+          <label class="field">Domain for the matcher<select id="domain"><option value="banking">banking</option><option value="food">food</option><option value="travel">travel</option><option value="support">support</option></select></label>
+        </div>
+        <label class="field" style="margin-top:10px">Reference sentence <span class="hint">optional, for WER: what was actually said</span>
+          <textarea id="reference" maxlength="{{ max_text_chars }}" rows="2" spellcheck="false"></textarea></label>
+        <div class="row" style="margin-top:12px">
+          <button type="button" class="btn primary" id="run-btn" disabled>Transcribe and analyze</button>
+          <button type="button" class="btn danger" id="cancel-btn" hidden>Cancel</button>
+        </div>
+        <div class="status-line" id="run-status" aria-live="polite"></div>
+        <div class="error-box" id="error" role="alert" hidden><b id="error-title">Error</b><pre id="error-detail"></pre><button type="button" class="btn" id="retry-btn">Retry</button></div>
+
+        <p class="step" style="margin-top:18px"><span class="n">4</span> Result</p>
+        <div class="result" id="result">
+          <div class="result-head" id="result-tags"></div>
+          <div class="transcript-box empty" id="out-transcript">No result yet. Nothing is pre-filled: this box only shows a transcript your browser produced.</div>
+          <div class="facts">
+            <div class="fact"><div class="l">detected language</div><div class="v" id="f-lang">-</div></div>
+            <div class="fact"><div class="l">latency (your device)</div><div class="v" id="f-latency">-</div></div>
+            <div class="fact"><div class="l">real-time factor</div><div class="v" id="f-rtf">-</div></div>
+            <div class="fact"><div class="l">intent</div><div class="v small" id="f-intent">-</div></div>
+            <div class="fact"><div class="l">slots</div><div class="v small" id="f-slots">-</div></div>
+            <div class="fact"><div class="l">WER</div><div class="v" id="f-wer">-</div></div>
+          </div>
+          <div class="compare" id="compare" hidden>
+            <div><h5>Stored baseline transcript <span id="cmp-base-run" class="muted"></span></h5><p id="cmp-base"></p><p class="tiny muted" id="cmp-base-facts" style="margin-top:6px"></p></div>
+            <div><h5>Your live transcript</h5><p id="cmp-live"></p><p class="tiny muted" id="cmp-live-facts" style="margin-top:6px"></p></div>
+          </div>
+          <p class="legend" id="result-note"></p>
+        </div>
+      </div>
+    </div>
+    <div class="privacy">
+      <div><b>Audio stays in your browser</b>Audio is processed in your browser and never uploaded.</div>
+      <div><b>Text goes to /api/analyze</b>The resulting text transcript (and the reference sentence, if you type one) is sent to this site's /api/analyze for intent, slots and WER. It is not stored or logged by us.</div>
+      <div><b>Models come from Hugging Face</b>Model files are downloaded from Hugging Face's CDN, so Hugging Face sees the download request. The library is loaded from jsDelivr.</div>
+    </div>
   </div>
 </section>
 
-<section class="section reveal" id="synthetic" style="--i: 2">
+{# ------------------------------------------------------------------ results #}
+<section class="section" id="results">
+  <div class="section-head reveal">
+    <div>
+      <span class="eyebrow"><span class="num">02</span> Benchmark results</span>
+      <h2>Task success and WER by language × condition</h2>
+      <p class="muted">The stored baseline runs: faster-whisper small (int8, CPU) on the 50 synthetic espeak-ng clips. Task success = right intent and every expected slot right.</p>
+    </div>
+    {% if fa and fh %}<div class="tabs" role="tablist" aria-label="Language policy">
+      <button type="button" role="tab" aria-selected="true" data-tab="auto" aria-controls="res-auto">auto-detect</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="hint" aria-controls="res-hint">language hint</button>
+    </div>{% endif %}
+  </div>
+  {% if not featured %}
+  <div class="card"><p class="muted" style="margin:0">No measured run yet. Create one with <code>make bench</code>.</p></div>
+  {% endif %}
+  {% for policy, v in featured.items() %}{% set m = v.entry.manifest %}{% set sm = v.summary %}
+  <div class="tabpanel" id="res-{{ policy }}" role="tabpanel" data-panel="{{ policy }}" {% if fa and policy != "auto" %}hidden{% endif %}>
+    <div class="meta">
+      <span class="chip">run <a href="/runs/{{ m.run_id }}"><b>{{ m.run_id }}</b></a></span>
+      <span class="chip">ASR <b>{{ m.asr_model }}</b>{% if m.asr_model_version %} ({{ m.asr_config.backend }} {{ m.asr_model_version }}){% endif %}</span>
+      <span class="chip">language <b>{{ policy }}</b></span>
+      <span class="chip">audio <b>{{ m.tts_engine or "-" }}</b></span>
+    </div>
+    {% if not v.hash_ok %}<div class="banner"><b>The scenario file has changed since this run.</b></div>{% endif %}
+    <div class="grid-2" style="margin-top:12px">
+      <div class="card reveal">
+        <h3>Task success</h3><p class="small muted" style="margin:2px 0 14px">passed / scenarios in the cell</p>
+        <div class="heat">
+          <span></span>{% for c in conditions %}<span class="h">{{ c }}</span>{% endfor %}<span class="h">all</span>
+          {% for lang in languages + ("all",) %}
+            <span class="rl">{{ lang }}</span>
+            {% for c in conditions + ("all",) %}{% set cell = v.matrix[lang][c] %}
+            <div class="cell {{ 'total' if lang == 'all' or c == 'all' else '' }}" style="--a: {{ '%.3f'|format(cell.rate) if cell.rate is not none else 0 }}; --d: {{ loop.index0 + loop.length * 0 }}" title="{{ lang }} / {{ c }}: {{ cell.ok }} of {{ cell.n }}">
+              <span class="v">{{ cell.ok }}/{{ cell.n }}</span><span class="s">{{ "%.0f"|format(100 * cell.rate) ~ "%" if cell.rate is not none else "-" }}</span></div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card reveal" style="--i: 1">
+        <h3>Corpus WER</h3><p class="small muted" style="margin:2px 0 14px">lower is better; can exceed 1 when words are added</p>
+        <div class="heat">
+          <span></span>{% for c in conditions %}<span class="h">{{ c }}</span>{% endfor %}<span class="h">all</span>
+          {% for lang in languages + ("all",) %}
+            <span class="rl">{{ lang }}</span>
+            {% for c in conditions + ("all",) %}
+              {% if lang == "all" and c == "all" %}{% set g = sm.overall %}{% elif lang == "all" %}{% set g = sm.by_condition.get(c) %}{% elif c == "all" %}{% set g = sm.by_language.get(lang) %}{% else %}{% set g = sm.by_language_condition.get(lang ~ "/" ~ c) %}{% endif %}
+              {% set w = g.corpus_wer if g else none %}
+              <div class="cell wer {{ 'total' if lang == 'all' or c == 'all' else '' }}" style="--a: {{ '%.3f'|format([w, 1.0]|min) if w is not none else 0 }}">
+                <span class="v">{{ "%.2f"|format(w) if w is not none else "-" }}</span><span class="s">n {{ g.n if g else 0 }}</span></div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:12px">
+      {% for lang in languages %}{% set g = sm.by_language.get(lang) %}{% if g %}
+      <div class="card reveal" style="--i: {{ loop.index }}">
+        <div class="eyebrow" style="color:var(--text-3)">{{ lang }}</div>
+        <div class="kpi" style="border:0;padding:0;background:none"><div class="v">{{ g.task_success }}<small>/{{ g.n }}</small></div></div>
+        <span class="bar thick" aria-hidden="true"><span style="width: {{ '%.1f'|format(100 * g.task_success / g.n) if g.n else 0 }}%"></span></span>
+        <p class="small muted" style="margin:10px 0 0">intent correct {{ "%.0f"|format(100 * g.intent_accuracy) }}% · corpus WER {{ "%.2f"|format(g.corpus_wer) if g.corpus_wer is not none else "-" }}{% if g.latency_p50_ms is not none %} · p50 {{ "%.0f"|format(g.latency_p50_ms) }} ms{% endif %}</p>
+      </div>
+      {% endif %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <p class="legend">Cells hold 3 to 10 scenarios, so one scenario moves a rate a lot. Audio is synthetic espeak-ng speech, not real callers; results describe this audio only.</p>
+</section>
+
+{# ------------------------------------------------------------------ failures #}
+<section class="section" id="failures">
+  <div class="section-head reveal">
+    <div>
+      <span class="eyebrow"><span class="num">03</span> Failure explorer</span>
+      <h2>Why scenarios fail</h2>
+      <p class="muted">Each failed scenario gets one primary category from <code>voicebench analyze</code>. Filter, then open the run page for the word diff and audio.</p>
+    </div>
+  </div>
+  {% for policy, v in featured.items() %}
+  <div class="tabpanel" data-panel="{{ policy }}" {% if fa and policy != "auto" %}hidden{% endif %}>
+    <div class="grid-2" style="grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr)">
+      <div class="card reveal">
+        <h3>{{ v.failures|length }} of {{ v.matrix.all.all.n }} scenarios failed <span class="muted small">({{ policy }})</span></h3>
+        <div class="hbars" style="margin-top:16px">
+          {% set top = (v.primary[0][1] if v.primary else 1) %}
+          {% for cat, n in v.primary %}
+          <div class="hbar bad"><span class="k">{{ cat }}</span><span class="t"><i style="width: {{ '%.1f'|format(100 * n / top) }}%"></i></span><span class="n">{{ n }}</span></div>
+          {% endfor %}
+        </div>
+        <p class="legend">wrong_language: auto-detect picked another language. slot_error: right intent, a slot wrong. agent_prompt_leak: the agent prompt in the barge-in audio ended up in the transcript.</p>
+      </div>
+      <div class="card reveal" style="--i: 1">
+        <div class="filters-inline" data-filter-for="fail-{{ policy }}">
+          <select data-key="lang" aria-label="Filter by language"><option value="">all languages</option>{% for l in languages %}<option>{{ l }}</option>{% endfor %}</select>
+          <select data-key="cat" aria-label="Filter by category"><option value="">all categories</option>{% for cat, n in v.primary %}<option>{{ cat }}</option>{% endfor %}</select>
+        </div>
+        <div class="fail-list" id="fail-{{ policy }}">
+          {% for f in v.failures %}{% set s = f.scenario %}{% set r = f.result %}
+          <article class="fail" data-lang="{{ s.language.value }}" data-cat="{{ f.case.primary }}">
+            <header><span class="id">{{ s.id }}</span><span class="pill bad">{{ f.case.primary }}</span><span class="tiny muted">{{ s.language.value }} · {{ s.condition.value }}</span></header>
+            <dl>
+              <dt>said</dt><dd>{{ s.reference }}</dd>
+              <dt>heard</dt><dd class="hyp">{{ r.transcript if r.error is none else "pipeline error" }}</dd>
+              <dt>intent</dt><dd><code>{{ s.expected_intent }}</code> → <code>{{ r.predicted_intent or "none" }}</code></dd>
+            </dl>
+          </article>
+          {% endfor %}
+        </div>
+        <p class="small" style="margin:12px 0 0"><a href="/runs/{{ v.entry.manifest.run_id }}#cases">Open every case of this run with diffs and audio →</a></p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+{# ------------------------------------------------------------------ all synthetic runs #}
+<section class="section reveal" id="synthetic">
   <div class="section-head">
     <div>
+      <span class="eyebrow"><span class="num">04</span> Committed runs</span>
       <h2>Synthetic benchmark (espeak-ng audio, 50 scenarios)</h2>
       <p class="muted small">Every run file in <code>{{ results_dir }}</code>. Task success = right intent and every expected slot right.</p>
     </div>
@@ -48,9 +282,11 @@
   {% endif %}
 </section>
 
-<section class="section reveal" id="realspeech" style="--i: 3">
+{# ------------------------------------------------------------------ real speech #}
+<section class="section reveal" id="realspeech">
   <div class="section-head">
     <div>
+      <span class="eyebrow"><span class="num">05</span> Real-speech lane</span>
       <h2>Real speech (external audio)</h2>
       <p class="muted small">Run files in <code>{{ real_dir }}</code>.</p>
     </div>
@@ -60,13 +296,23 @@
   {% if not real_rows %}
   <div class="card"><p class="muted" style="margin:0">No real-speech runs yet. Create one with <code>make realspeech-fetch</code> then <code>make realspeech</code>.</p></div>
   {% else %}
+  <div class="grid-2" style="margin-bottom:12px">
+    {% for policy, x in real_featured.items() %}{% set s = x.s %}
+    <a class="card stat" href="/realspeech/{{ x.run.run_id }}" style="padding:18px">
+      <span class="eyebrow" style="color:var(--text-3)">newest · {{ policy }}</span>
+      <span class="v" style="margin-top:8px">{{ "%.3f"|format(s.corpus_wer) if s.corpus_wer is not none else "-" }} <small>corpus WER</small></span>
+      {% if s.corpus_wer is not none %}<span class="bar wer thick" style="margin:10px 0" aria-hidden="true"><span style="width: {{ '%.1f'|format(100 * ([s.corpus_wer, 1.0]|min)) }}%"></span></span>{% endif %}
+      <span class="l">{{ x.run.asr_model }} · {{ s.n }} clips · detected hi {{ s.n_detected_hi }}/{{ s.n - s.errors }} · loops {{ s.repetition_loops }}</span>
+    </a>
+    {% endfor %}
+  </div>
   <div class="card flush"><div class="table-wrap"><table class="rtable">
   <thead><tr><th>run</th><th>ASR</th><th>language</th><th>data</th><th class="num">clips</th><th class="num">corpus WER</th><th class="num">detected hi</th><th class="num">loops</th></tr></thead>
   <tbody>
   {% for row in real_rows %}{% set m = row.run %}{% set s = row.s %}
   <tr>
     <td class="run full"><a href="/realspeech/{{ m.run_id }}">{{ m.run_id }}</a><div class="small muted">{{ m.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</div></td>
-    <td class="nowrap" data-label="ASR">{{ m.asr_model }}</td>
+    <td data-label="ASR">{{ m.asr_model }}</td>
     <td data-label="language">{{ m.language_policy }}</td>
     <td class="small kind full" data-label="data"><span class="tag">real speech</span> {{ m.dataset.name }} {{ m.dataset.config }}/{{ m.dataset.split }}
       {% if m.rescored_from %}<br>re-scored from {{ m.rescored_from }}{% endif %}</td>
@@ -80,9 +326,11 @@
   {% endif %}
 </section>
 
-<section class="section reveal" id="gnani" style="--i: 4">
+{# ------------------------------------------------------------------ external #}
+<section class="section reveal" id="gnani">
   <div class="section-head">
     <div>
+      <span class="eyebrow"><span class="num">06</span> External comparison</span>
       <h2>External API runs (Gnani)</h2>
       <p class="muted small">Run files in <code>{{ gnani_dir }}</code>; see docs/GNANI_QA.md.</p>
     </div>
