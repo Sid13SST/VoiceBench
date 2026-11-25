@@ -211,6 +211,20 @@ It runs trusted local Python code only. The contract, the Python-level
 transcriber hook and their limits (built-in domains and intents only, no
 HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 
+### Deploying the dashboard (Vercel)
+
+The dashboard is read-only, so it can be hosted as one Python function on
+Vercel's free Hobby plan. `app.py` at the repo root exposes
+`app = create_app(...)` with `results/`, `results/realspeech`,
+`results/gnani` and `audio/v1` resolved from the repo root;
+`requirements.txt` lists only what the dashboard imports (FastAPI, Jinja2,
+pydantic, jiwer: no faster-whisper, numpy or scipy); `vercel.json` keeps
+tests and docs out of the bundle; `.python-version` pins 3.13. Import the
+repository in Vercel (or run `vercel deploy`) with no build settings. The
+same app runs locally with `uvicorn app:app`; `make run` is unchanged.
+The deployed pages show only the committed run files: nothing is run or
+re-scored there.
+
 ## Limitations
 
 **The audio**
