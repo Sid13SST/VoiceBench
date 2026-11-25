@@ -211,6 +211,48 @@ It runs trusted local Python code only. The contract, the Python-level
 transcriber hook and their limits (built-in domains and intents only, no
 HTTP) are in [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
 
+### Dashboard and live test console (Vercel)
+
+The dashboard opens with a **live test console**: Whisper tiny, base or
+small (onnx-community ONNX, q8, pinned revisions) runs in the visitor's
+browser with transformers.js (WebGPU if available, else WASM). Record from
+the microphone, upload a file (30 s, 10 MB) or replay one of the 50
+benchmark clips next to its stored baseline transcript. Audio is processed
+in the browser and never uploaded; only the text transcript (and an
+optional reference sentence) is sent to `/api/analyze`, which runs this
+repo's matcher and WER code and does not store or log it. A live result is
+a fresh run of a different model build, never the stored baseline. Details,
+model licences and a measurement on 30 human Hindi clips (every browser
+model had corpus WER above 1 there): [`docs/LIVE_CONSOLE.md`](docs/LIVE_CONSOLE.md).
+
+Below the console: task success and WER heatmaps by language × condition,
+a failure explorer, every committed run, the real-speech lane and the
+external (Gnani) lane, with their caveats.
+
+It deploys as one Python function on Vercel's free Hobby plan. `app.py` at
+the repo root exposes `app = create_app(...)` with `results/`,
+`results/realspeech`, `results/gnani` and `audio/v1` resolved from the
+repo root; `requirements.txt` lists only what the dashboard imports
+(FastAPI, Jinja2, pydantic, jiwer: no faster-whisper, numpy or scipy; the
+bundle is about 35 MB); `vercel.json` keeps tests, docs and tools out of
+the bundle and sets the cross-origin isolation headers the console uses
+for WASM threads; `.python-version` pins 3.13. Import the repository in
+Vercel (or run `vercel deploy`) with no build settings. Locally:
+`uvicorn app:app`, or `make run` as before. The model files come from
+Hugging Face and the library from jsDelivr, both on their free tiers.
+
+| desktop, 1280 px | phone, 390 px |
+|---|---|
+| <img src="docs/screenshots/dashboard-index-1280.webp" alt="Home page hero at 1280 px" width="560"> | <img src="docs/screenshots/dashboard-index-390.webp" alt="Home page hero at 390 px" width="200"> |
+| <img src="docs/screenshots/console-midrun-1280.webp" alt="Live console downloading whisper-tiny at 1280 px" width="560"> | <img src="docs/screenshots/console-midrun-390.webp" alt="Live console downloading whisper-tiny at 390 px" width="200"> |
+| <img src="docs/screenshots/console-result-1280.webp" alt="Live console result for benchmark clip v1-002 next to the stored baseline, 1280 px" width="560"> | <img src="docs/screenshots/console-result-390.webp" alt="Live console result at 390 px" width="200"> |
+| <img src="docs/screenshots/results-1280.webp" alt="Task success and WER heatmaps at 1280 px" width="560"> | <img src="docs/screenshots/dashboard-run-390.webp" alt="Run page at 390 px" width="200"> |
+
+The result screenshots show a real run: whisper-tiny in headless Chromium
+heard benchmark clip v1-002 ("please send five thousand rupees to rahul")
+as "Please, and five thousand rupees to my home." (no intent, task failed),
+where the stored faster-whisper small run passed.
+
 ## Limitations
 
 **The audio**

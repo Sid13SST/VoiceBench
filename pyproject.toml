@@ -40,7 +40,7 @@ voicebench = "voicebench.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"voicebench.dashboard" = ["templates/*.html"]
+"voicebench.dashboard" = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

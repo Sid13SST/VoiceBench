@@ -1,0 +1,7 @@
+# Runtime dependencies of the read-only dashboard only (Vercel deployment, app.py).
+# The benchmark itself (ASR, audio synthesis) needs the full package:
+# pip install -e ".[dev,asr]" or `make setup`.
+fastapi>=0.110
+jinja2>=3.1
+pydantic>=2.5,<3
+jiwer>=3.0

@@ -8,15 +8,19 @@
 </div>{% else %}<span class="muted">-</span>{% endif %}
 {%- endmacro %}
 {% block body %}
-<p class="small"><a href="/">← all runs</a></p>
-<h1>{{ m.run_id }}</h1>
-<p class="muted small">
-  ASR <b>{{ m.asr_model }}</b>{% if m.asr_model_version %} ({{ m.asr_config.backend }} {{ m.asr_model_version }}){% endif %}
-  · understander {{ ui.understander(m.understander) }}
-  · language {{ m.language_policy or "-" }} · audio {{ m.tts_engine or "-" }}
-  · commit <code>{{ (m.git_commit or "unknown")[:12] }}</code><br>
-  command <code>{{ m.command }}</code>
-</p>
+<div class="reveal">
+<a class="back" href="/">← all runs</a>
+<div class="eyebrow" style="margin-top:14px">{% if gnani_lane %}external API run{% else %}synthetic benchmark run{% endif %}</div>
+<h1 class="run-id">{{ m.run_id }}</h1>
+<div class="meta">
+  <span class="chip">ASR <b>{{ m.asr_model }}</b>{% if m.asr_model_version %} ({{ m.asr_config.backend }} {{ m.asr_model_version }}){% endif %}</span>
+  <span class="chip">understander {{ ui.understander(m.understander) }}</span>
+  <span class="chip">language <b>{{ m.language_policy or "-" }}</b></span>
+  <span class="chip">audio <b>{{ m.tts_engine or "-" }}</b></span>
+  <span class="chip">commit <code>{{ (m.git_commit or "unknown")[:12] }}</code></span>
+</div>
+<p class="muted small" style="margin:8px 0 0">command <code class="cmd">{{ m.command }}</code></p>
+</div>
 {% if m.source.value == "fixture" %}<div class="banner"><b>Fixture data.</b> These results are hand-written for testing and are not a measurement.</div>{% endif %}
 {% if external_api %}<div class="banner"><b>External API run ({{ external_api }}).</b> {% if gnani_lane == "roundtrip" %}TTS + STT round trip: the reference was synthesized by the Gnani TTS API and transcribed by the Gnani STT API, so these numbers measure both services together.{% else %}Transcribed by a remote, paid STT service on a subset of the scenarios.{% endif %} {{ comparability[0] | upper }}{{ comparability[1:] }}. Latency includes the network round trip.</div>{% endif %}
 {% if m.asr_model == "oracle-reference" %}<div class="banner"><b>Not an ASR result.</b> The reference text was used as the transcript, to check the pipeline.</div>{% endif %}
@@ -25,19 +29,32 @@
 {% if not hash_ok %}<div class="banner"><b>The scenario file has changed since this run.</b> References shown may not be the ones it was scored against.</div>{% endif %}
 {% if m.tts_engine and m.tts_engine.startswith("espeak") %}<p class="small muted">Audio is synthetic espeak-ng speech, not real callers. Results describe this audio only.</p>{% endif %}
 
-<h2>Task success by language and condition</h2>
-<div class="table-wrap"><table>
+{% set o = summary.overall %}
+<div class="kpis">
+  <div class="kpi reveal" style="--i: 1"><div class="l">task success</div><div class="v">{{ o.task_success }}<small>/{{ o.n }}</small></div>
+    <span class="bar" aria-hidden="true"><span style="width: {{ '%.1f'|format(100 * o.task_success / o.n) if o.n else 0 }}%"></span></span></div>
+  <div class="kpi reveal" style="--i: 2"><div class="l">intent correct</div><div class="v">{{ "%.0f"|format(100 * o.intent_accuracy) }}%</div>
+    <span class="bar" aria-hidden="true"><span style="width: {{ '%.1f'|format(100 * o.intent_accuracy) }}%"></span></span></div>
+  <div class="kpi reveal" style="--i: 3"><div class="l">corpus WER</div><div class="v">{{ "%.2f"|format(o.corpus_wer) if o.corpus_wer is not none else "-" }}</div>
+    {% if o.corpus_wer is not none %}<span class="bar wer" aria-hidden="true" title="bar capped at WER 1.0"><span style="width: {{ '%.1f'|format(100 * ([o.corpus_wer, 1.0]|min)) }}%"></span></span>{% endif %}</div>
+  <div class="kpi reveal" style="--i: 4"><div class="l">latency p50 / p95</div><div class="v">{% if o.n_timed %}{{ "%.0f"|format(o.latency_p50_ms) }}<small>/ {{ "%.0f"|format(o.latency_p95_ms) }} ms</small>{% else %}-{% endif %}</div></div>
+</div>
+
+<section class="section reveal" style="--i: 2">
+<div class="section-head"><h2>Task success by language and condition</h2></div>
+<div class="card flush"><div class="table-wrap"><table class="rtable cols-1">
 <thead><tr><th>language</th>{% for c in conditions %}<th>{{ c }}</th>{% endfor %}<th>all</th></tr></thead>
 <tbody>
 {% for lang in languages + ("all",) %}
-<tr><th>{{ lang }}</th>{% for c in conditions + ("all",) %}<td>{{ meter(matrix[lang][c]) }}</td>{% endfor %}</tr>
+<tr><th>{{ lang }}</th>{% for c in conditions + ("all",) %}<td data-label="{{ c }}">{{ meter(matrix[lang][c]) }}</td>{% endfor %}</tr>
 {% endfor %}
-</tbody></table></div>
+</tbody></table></div></div>
 <p class="legend">Each cell: scenarios passed / scenarios in the cell. Cells hold 3 to 10 scenarios, so one scenario moves a rate a lot.</p>
+</section>
 
-<h2>Latency and cost</h2>
-{% set o = summary.overall %}
-<p class="small">
+<section class="section reveal" style="--i: 3">
+<div class="section-head"><h2>Latency and cost</h2></div>
+<div class="card note">
 {% if o.n_timed %}
   Per-utterance latency over {{ o.n_timed }} timed clips: <b>p50 {{ "%.0f"|format(o.latency_p50_ms) }} ms</b>,
   <b>p95 {{ "%.0f"|format(o.latency_p95_ms) }} ms</b>; real-time factor (latency ÷ audio length)
@@ -51,43 +68,49 @@
 <br>
 {% if m.hardware %}Hardware: {{ m.hardware.cpu }}, {{ m.hardware.logical_cpus }} logical CPUs, {{ m.hardware.ram_gb }} GB RAM, {{ m.hardware.os }}. Latency only compares between runs on the same hardware.
 {% else %}Hardware not recorded for this run.{% endif %}
-</p>
+</div>
+</section>
 
-<h2>WER, intent accuracy and latency</h2>
-<div class="table-wrap"><table>
+<section class="section reveal" style="--i: 4">
+<div class="section-head"><h2>WER, intent accuracy and latency</h2></div>
+<div class="card flush"><div class="table-wrap"><table class="rtable cols-3">
 <thead><tr><th>group</th><th class="num">n</th><th class="num">intent correct</th><th class="num">corpus WER</th><th class="num">pipeline errors</th><th class="num">p50 ms</th><th class="num">p95 ms</th></tr></thead>
 <tbody>
 {% for title, groups in [("all", {"all": summary.overall}), ("language", summary.by_language), ("condition", summary.by_condition), ("domain", summary.by_domain)] %}
 {% for name, g in groups.items() %}
-<tr><td>{{ name if title == "all" else title ~ ": " ~ name }}</td><td class="num">{{ g.n }}</td>
-<td class="num">{{ "%.0f"|format(100 * g.intent_accuracy) }}%</td>
-<td class="num">{{ "%.2f"|format(g.corpus_wer) if g.corpus_wer is not none else "-" }}</td>
-<td class="num">{{ g.errors }}</td>
-<td class="num">{{ "%.0f"|format(g.latency_p50_ms) if g.latency_p50_ms is not none else "-" }}</td>
-<td class="num">{{ "%.0f"|format(g.latency_p95_ms) if g.latency_p95_ms is not none else "-" }}</td></tr>
+<tr><td class="full"><b>{{ name if title == "all" else title ~ ": " ~ name }}</b></td><td class="num" data-label="n">{{ g.n }}</td>
+<td class="num" data-label="intent correct">{{ "%.0f"|format(100 * g.intent_accuracy) }}%</td>
+<td class="num" data-label="corpus WER">{{ ui.wer(g.corpus_wer, "%.2f") }}</td>
+<td class="num" data-label="pipeline errors">{{ g.errors }}</td>
+<td class="num" data-label="p50 ms">{{ "%.0f"|format(g.latency_p50_ms) if g.latency_p50_ms is not none else "-" }}</td>
+<td class="num" data-label="p95 ms">{{ "%.0f"|format(g.latency_p95_ms) if g.latency_p95_ms is not none else "-" }}</td></tr>
 {% endfor %}{% endfor %}
-</tbody></table></div>
-<p class="legend">WER after lower-casing and removing punctuation. Numbers and script are not rewritten, so "5000" vs "five thousand" counts as an error. WER can exceed 1 when the model adds words.</p>
+</tbody></table></div></div>
+<p class="legend">WER after lower-casing and removing punctuation. Numbers and script are not rewritten, so "5000" vs "five thousand" counts as an error. WER can exceed 1 when the model adds words; the bars stop at 1.</p>
+</section>
 
-<h2 id="cases">Cases</h2>
+<section class="section" id="cases">
+<div class="section-head"><h2>Cases</h2></div>
 <form class="filters" method="get" action="#cases">
   <label>status<select name="status">{% for s in ("fail", "pass", "all") %}<option value="{{ s }}" {% if f.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
   <label>language<select name="language"><option value="">all</option>{% for l in languages %}<option {% if f.language == l %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
   <label>condition<select name="condition"><option value="">all</option>{% for c in conditions %}<option {% if f.condition == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
   <button type="submit">apply</button>
 </form>
-<p class="muted small">{{ cases|length }} case{{ "" if cases|length == 1 else "s" }}. In the word diff:
+<p class="muted small" style="margin:0 0 4px">{{ cases|length }} case{{ "" if cases|length == 1 else "s" }}. In the word diff:
   <span class="w del">missed</span> reference words, <span class="w ins">added</span> words, <span class="w sub">substituted</span> words.</p>
 
 {% for c in cases %}{% set s = c.scenario %}{% set r = c.result %}
-<section class="case">
+<article class="case">
   <header>
     <span class="status {{ 'pass' if r.task_success else 'fail' }}">{{ "✓ PASS" if r.task_success else "✗ FAIL" }}</span>
-    <b>{{ s.id }}</b>
-    <span class="muted small">{{ s.language.value }} · {{ s.domain.value }} · {{ s.condition.value }}{% if s.snr_db %} {{ s.snr_db }} dB {{ s.noise_type.value }}{% endif %}{% if s.interruption %} ({{ s.interruption.kind.value }}){% endif %}</span>
-    {% if r.wer is not none %}<span class="small">WER {{ "%.2f"|format(r.wer) }}</span>{% endif %}
-    {% if r.latency_ms is not none %}<span class="small muted">{{ "%.0f"|format(r.latency_ms) }} ms</span>{% endif %}
-    {% if r.detected_language %}<span class="small muted">lang {{ r.detected_language }} · script {{ r.transcript_script }}</span>{% endif %}
+    <b class="id">{{ s.id }}</b>
+    <span class="ctx">{{ s.language.value }} · {{ s.domain.value }} · {{ s.condition.value }}{% if s.snr_db %} {{ s.snr_db }} dB {{ s.noise_type.value }}{% endif %}{% if s.interruption %} ({{ s.interruption.kind.value }}){% endif %}</span>
+    <span class="figs">
+    {% if r.wer is not none %}<span>WER {{ "%.2f"|format(r.wer) }}</span>{% endif %}
+    {% if r.latency_ms is not none %}<span class="muted">{{ "%.0f"|format(r.latency_ms) }} ms</span>{% endif %}
+    {% if r.detected_language %}<span class="muted">lang {{ r.detected_language }} · script {{ r.transcript_script }}</span>{% endif %}
+    </span>
   </header>
   {% if r.error %}
   <p class="status fail">Pipeline error: {{ r.error }}</p>
@@ -107,7 +130,8 @@
     {% elif s.expected_slots %}<br><b>slots</b> all correct{% endif %}
   </div>
   {% endif %}
-  {% if has_audio %}<audio controls preload="none" src="/audio/{{ s.id }}.wav"></audio>{% endif %}
-</section>
+  {% if has_audio %}<audio controls preload="none" src="/audio/{{ s.id }}.wav" aria-label="audio for {{ s.id }}"></audio>{% endif %}
+</article>
 {% endfor %}
+</section>
 {% endblock %}

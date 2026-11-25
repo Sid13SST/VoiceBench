@@ -1,0 +1,316 @@
+{
+ "model": "onnx-community/whisper-base",
+ "revision": "27a07b4b52b3a4c5886134bb4320e93e1a4bbc7c",
+ "dtype": "q8",
+ "device": "wasm",
+ "load_ms": 6485.864999999991,
+ "language_mode": "auto",
+ "cpu_throttle": 1,
+ "browser": {
+  "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "cores": 4,
+  "coi": true
+ },
+ "clips": [
+  {
+   "clip_id": "10135688561274120767",
+   "reference": "इसे केमिकल का pH कहा जाता है. आप लाल गोभी के जूस का इस्तेमाल करके एक संकेतक बना सकते हैं.",
+   "transcript": "اسے kamikal ka ph ka khadar tha hai, aap lal gobi ke juus ko smal kar ke ek sankhe tag bhanasak te hai.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.763285330930918,
+   "total_ms": 4569.320000000065,
+   "audio_s": 8.22
+  },
+  {
+   "clip_id": "10245365873747218908",
+   "reference": "यह संबंधित है, लेकिन आम तौर पर इसमें अल्पाइन शैली की स्की टूरिंग या माउंटेनीयरिंग शामिल नहीं होती है, जिसे खड़े इलाकों में किया जाता है और जिसके लिए बहुत कड़ी स्की और बूट की ज़रूरत होती है.",
+   "transcript": "mundithele, but we call it alpine shell, which is not used in the mountaineering.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.854551302318219,
+   "total_ms": 3133.570000000065,
+   "audio_s": 13.68
+  },
+  {
+   "clip_id": "10590937942465254187",
+   "reference": "गंभीर मौसम किसी भी खतरनाक मौसमी घटना के लिए वर्गीय शब्द है जिसमें नुकसान, गंभीर सामाजिक व्यवधान, या मानव जीवन की हानि की संभावना है।",
+   "transcript": "گمبیر موسم کسی بھی ختمنا گموسمی گتنہ کے لیے ورگی یہ سب دھ ہے جس میں نکسان گمبیر ساماج گبداہن یا ماناو جیوان کی حانی کی سمب آبنا ہے",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8711486238395681,
+   "total_ms": 5900.770000000019,
+   "audio_s": 10.5
+  },
+  {
+   "clip_id": "10980788482676060439",
+   "reference": "उन्होंने अफवाहों को “राजनीतिक बकवास और मूर्खतापूर्ण” कहा.",
+   "transcript": "اُمھنے نقوا کو رجنی تک باکوہ سور موکتا پنو کھا حا",
+   "error": null,
+   "language": "ne",
+   "language_prob": 0.4712845673306664,
+   "total_ms": 3784.939999999944,
+   "audio_s": 4.08
+  },
+  {
+   "clip_id": "11014623647783711221",
+   "reference": "इंटरनेट, लोगों और अंतर-परस्पर संचार, दोनों के तत्वों को मिलाता है.",
+   "transcript": "Internet, Logon & Interpraspa Sanja, Dhanog, etc.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.888631523294205,
+   "total_ms": 4135.649999999907,
+   "audio_s": 5.46
+  },
+  {
+   "clip_id": "11099457867420986000",
+   "reference": "उनका सिंगापुर के उप-प्रधान मंत्री वोंग कान सेंग ने स्वागत किया और उन्होंने सिंगापुर के प्रधानमंत्री ली सिएन लूंग के साथ व्यापार और आतंकवाद के मामले पर बातचीत की.",
+   "transcript": "Un ca singa putea uprădă în matrivong, pânțem ne-asua gătia. Or un hâne singa putea lădăd în matriilii si în lung, de estate. Vi-o pără o rătân cu ati care m-am le părbăt citii.",
+   "error": null,
+   "language": "ro",
+   "language_prob": 0.37538517689629375,
+   "total_ms": 7079.174999999814,
+   "audio_s": 12.36
+  },
+  {
+   "clip_id": "11299735708347263843",
+   "reference": "1963 में बाँध बनने के बाद, मौसमी बाढ़ जो पूरे नदी में तलछट फैला देगी वह रुक गई थी.",
+   "transcript": "ایک عزار 1930 میں بعد بات بنے کے بعد مواصمی بار جو پوری ندی میں تلچت فلا دے گی ویرور گئی تھے",
+   "error": null,
+   "language": "ur",
+   "language_prob": 0.8947596804939028,
+   "total_ms": 4854.77500000014,
+   "audio_s": 8.22
+  },
+  {
+   "clip_id": "11454315521519829761",
+   "reference": "बाद में उन्हें कैम्ब्रिज में एडेनब्रुक के अस्पताल में स्थानांतरित कर दिया गया.",
+   "transcript": "بعد میں اُنے کامریج میں اِدن بروک کے اُس پتل میں ستان ناندرِت کر دیا گیا",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.7983284809727914,
+   "total_ms": 4131.770000000019,
+   "audio_s": 8.4
+  },
+  {
+   "clip_id": "11483002217487175688",
+   "reference": "तीसरी शताब्दी ईसा पूर्व में मिस्रियों द्वारा निर्मित, ग्रेट पिरामिड मृत फिरौन का सम्मान करने के लिए निर्मित कई बड़ी पिरामिड संरचनाओं में से एक है।",
+   "transcript": "30 ھa ndi eesa purwamey misriyon dwaran nirmit, great pyramid mirit firon ka samman karne ke liye nirmit, kai buddy pyramid sancaarnau mese egg hai.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.6557997083297713,
+   "total_ms": 4706.670000000158,
+   "audio_s": 12.24
+  },
+  {
+   "clip_id": "11534298179848099715",
+   "reference": "गंभीर मौसम किसी भी खतरनाक मौसमी घटना के लिए वर्गीय शब्द है जिसमें नुकसान, गंभीर सामाजिक व्यवधान, या मानव जीवन की हानि की संभावना है।",
+   "transcript": "Gambir Maasam, Kisee, Khatarnath Maasam, Ghatna, Varghye, Shabdha, Nukshan, Gambir Samajib, Pyaugthan or Manojirvan, Ki Hane, Kisambhav, May.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8998463932560314,
+   "total_ms": 5731.540000000037,
+   "audio_s": 10.8
+  },
+  {
+   "clip_id": "11887255676786903166",
+   "reference": "चीज़ों पर कुछ बनाकर या खरोंच कर इस जगह को नुक़सान न पहुँचाएँ.",
+   "transcript": "تیزوں پر کچھ بنا کر یا کھنوچ کر ایس جگہ کو نخصان نہ پہچھا ہیں",
+   "error": null,
+   "language": "ur",
+   "language_prob": 0.6250468701022613,
+   "total_ms": 4209.844999999972,
+   "audio_s": 5.82
+  },
+  {
+   "clip_id": "12026665813540473757",
+   "reference": "इसलिए, यह माना जा रहा है कि नोटेशन को सिर्फ़ एक लेबल के रूप में जोड़ा गया था.",
+   "transcript": "اس لیے یہ مانا جا رہا ہے کہ نوٹیشن کو صرف ایک لیول کر اوپ میں جوڑا گیا تھا",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.62276450809034,
+   "total_ms": 4068.1100000001024,
+   "audio_s": 6.36
+  },
+  {
+   "clip_id": "12095524946571612509",
+   "reference": "ऐसी कोई वैश्विक परिभाषा नहीं है जिसके लिए निर्मित सामान एंटीक होते हैं. कुछ कर एजेंसियाँ 100 साल से पुराने सामान को एंटीक के तौर पर परिभाषित करती हैं.",
+   "transcript": "Acique, kui, vashvik, paribhashah, nihay, nirmit, saman, antik, kuchkar, agensia, sosal, purane, saman, ko antik, kitor, par, vashik, kirti,",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9662445198835717,
+   "total_ms": 5112.639999999898,
+   "audio_s": 14.94
+  },
+  {
+   "clip_id": "12503699152033832615",
+   "reference": "अटलांटिक तूफ़ान मौसम का दसवाँ तूफ़ान, उपोष्णकटिबंधीय तूफ़ान जेरी, आज अटलांटिक महासागर में बना है.",
+   "transcript": "Attlantic Tufan, Mausambh Ka Daswa Tufan Uposna Katibandha Yajufan Jairi, Today in Atlantic Mahashagar,",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.6410976411399703,
+   "total_ms": 4053.590000000084,
+   "audio_s": 9.78
+  },
+  {
+   "clip_id": "12975824759916659",
+   "reference": "बेशक इस परंपरा के पीछे ईसाई धर्मशास्त्र के स्पष्टीकरण दिए जाते हैं, लेकिन एक प्री-क्रिश्चयन स्प्रिंग और फ़र्टिलिटी रस्म भी हो सकती है.",
+   "transcript": "بیشک اس پر براکھ کے پیچھے اسائی دھرم شاہستر کے سپرشٹی کرن دیے جاتے ہیں. لیکن ایک پریکریشچن سپرنگ اور فرطیلیٹی رسم بھی ہو سکتی ہے.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8192539516490388,
+   "total_ms": 6321.850000000093,
+   "audio_s": 12.84
+  },
+  {
+   "clip_id": "13003185437122223029",
+   "reference": "हालाँकि, लगभग रातों-रात इन योजनाओं को तब बनाया गया था जब सोवियत की यूनियन रेड आर्मी के 800,000 से ज़्यादा सैनिकों ने पोलैंड के पूर्वी क्षेत्रों पर हमला करने के बाद प्रवेश करते हुए बेलारूसी और यूक्रेनी मोर्चे खड़े कर दिए थे. उन्होंने यह रिगा शांति संधि, द सोवियत-पॉलिश नॉन-एग्रेशन पैक्ट और अन्य अंतरराष्ट्रीय द्विपक्षीय और बहुपक्षीय दोनों तरह की संधियों का उल्लंघन करते हुए किया था.",
+   "transcript": "hala ki lagwag ratu ratin yojnao ko tab banayagayat ha, chub soviyaat ki union red army ke 8 laksis yadha, saini ko ne poland ke purvik shitro varham lagarne keb bad, prveish karte huy, bella rusiya yukreini murkhe kardeye tha, unho ne ye riga shanti sandi, da soviyaat polish non agression, pact aur anyanthar astridh viy pakshib aur bhaupakshib dono tarakhi sandi aur kao langan garte huy kiyat ha,",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.7578832403697124,
+   "total_ms": 9970.920000000158,
+   "audio_s": 31.44
+  },
+  {
+   "clip_id": "13109433266350566952",
+   "reference": "अलगाव और पुनर्संयोजन भिन्नता प्रत्येक पीढ़ी के साथ दो पूलों के बीच आगे-पीछे होती रहती है।",
+   "transcript": "Álgav & Puneer Senyujan, Binnata Pratik Pidi ke Saad, 2 Puleke Bich, Aagye Pichi khuti rahi thi hai.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9842182900451638,
+   "total_ms": 4680.550000000047,
+   "audio_s": 10.08
+  },
+  {
+   "clip_id": "13327907168028106279",
+   "reference": "1889 में यह बंदरगाह कुख्यात नौसैनिक गतिरोध का ठिकाना था उस समय जर्मनी, अमेरिका और ब्रिटेन के सात जहाजों ने इस बंदरगाह से जाने से इनकार कर दिया था.",
+   "transcript": "1819-1919-1919-1919-1919-1919-1919-1919-1919-1919-1919-1919-1919-1919-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-19-",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9516074907760905,
+   "total_ms": 28774.425000000047,
+   "audio_s": 12.06
+  },
+  {
+   "clip_id": "13563417804047448798",
+   "reference": "यह शहर, अफ़्रीका के कुछ सबसे सस्ते पहाड़ी गोरिल्ला ट्रेकिंग के साथ ही नायरागोंगो ज्वालामुखी की चढ़ाई करने का बेस भी है.",
+   "transcript": "یہ شرح فرقہ کے کتھ سب سے سستے پاہلی گرلیٹریکن کے ساتھ ہی نائرہ بونگو جو علا مقیقی کی چڑائی کرنے کا بیز بھی ہے۔",
+   "error": null,
+   "language": "ur",
+   "language_prob": 0.5627633577971901,
+   "total_ms": 5748.290000000037,
+   "audio_s": 10.2
+  },
+  {
+   "clip_id": "1389858613705387489",
+   "reference": "आप गोमा के आस-पास घूमने के लिए बोडा-बोडा (मोटरसाइकिल टैक्सी) ले सकते हैं. छोटी सैर के लिए आम तौर पर (स्थानीय) किराया करीब 500 कांगोलीज़ फ़्रैंक लगता है.",
+   "transcript": "Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma,oma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma, Goma,oma, Goma,oma, Goma, Goma, Goma,oma, Goma, Goma,oma, Goma,oma, Goma, Goma,oma, Goma,oma, Goma, Goma,oma, Goma,oma, Goma, Goma,oma, Goma,oma, Goma,oma, Goma,oma, Goma, Goma,oma,oma, Goma,oma, Goma,oma, Goma,oma,",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9156549589869438,
+   "total_ms": 25673.050000000047,
+   "audio_s": 14.64
+  },
+  {
+   "clip_id": "14211299707514072668",
+   "reference": "तुर्की के राष्ट्रपति रजब तैयब इरदुगान के साथ ट्रंप की फ़ोन पर चर्चा होने के बाद घोषणा की गई थी.",
+   "transcript": "Turki Ke Rashpati Rajabtaiyak Urdoan ke Saad Ram ki Phon Parcharcha, Phonik ke baad Khushna ki Geethi.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.6140531296110044,
+   "total_ms": 4208.184999999823,
+   "audio_s": 10.62
+  },
+  {
+   "clip_id": "14283252976422276726",
+   "reference": "उत्तर की ओर के बड़े क्षेत्र में आबादी बहुत ही कम है और कुछ इलाकों में तो लगभग कोई इंसानी आबादी नहीं है.",
+   "transcript": "Uttar ki oer ke bade shetra me abadi, Bhoodhi kaam hai, akkukh illaakumet lagbha koi insani abadi hai je nahi.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8375535468498412,
+   "total_ms": 4384.719999999972,
+   "audio_s": 7.62
+  },
+  {
+   "clip_id": "14578853254924901868",
+   "reference": "कंफेडेरशन के अनुच्छेद के तहत क्रांतिकारी युद्ध के दौरान, तेरह राज्यों ने पहली बार एक कमजोर केंद्रीय सरकार का गठन किया जिसमें कांग्रेस इसका एकमात्र घटक थी.",
+   "transcript": "Konfineration ke Amitshid ke Tahad Karanti Kari Utt ke Daran, Thera Rajya se, phele baar ik Kamsur ke Inve Sargarh ka ghatat kya, jis mein Kongres, iska ik matra ghatat ki.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9190752640438197,
+   "total_ms": 5514.399999999907,
+   "audio_s": 14.04
+  },
+  {
+   "clip_id": "14706914212578682198",
+   "reference": "लूना को साथी पहलवानों ने भी श्रद्धांजलि दी.",
+   "transcript": "Lona Kusati Pahelvanon Nishraddhanjali Dhi",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.4549312194519886,
+   "total_ms": 3048.9950000001118,
+   "audio_s": 4.74
+  },
+  {
+   "clip_id": "15102900664499962233",
+   "reference": "विशेष रूप से, यह दावा किया जाता है कि किसी व्यक्ति की सूक्ष्म अभिव्यक्तियों की सही व्याख्या करके यह समझा सकता है कि वह झूठ बोल रहा है या नहीं।",
+   "transcript": "Vise srubh ja dawakya jaatah hai ki ki sviyaakti ki sukshn abhiryaakti o ki sahi vyaakya karni karni karni yaa samja saktah hai ki waajurth bol raha hai yaa nahin",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9842145353817846,
+   "total_ms": 6419.314999999944,
+   "audio_s": 10.2
+  },
+  {
+   "clip_id": "15449373665420679878",
+   "reference": "ब्लॉगिंग एक ऐसा टूल है जो सहयोग को प्रेरित करता है, और छात्रों को पारंपरिक स्कूल के दिन से बेहतर सीखने के लिए प्रोत्साहित करता है.",
+   "transcript": "Blogging is an example of a tool that is used to create a site and help students to learn better from school.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.749156066887969,
+   "total_ms": 3898.1299999998882,
+   "audio_s": 10.26
+  },
+  {
+   "clip_id": "15862862082216857049",
+   "reference": "तुर्की के राष्ट्रपति रजब तैयब इरदुगान के साथ ट्रंप की फ़ोन पर चर्चा होने के बाद घोषणा की गई थी.",
+   "transcript": "Turghe ki Rashtri Pati Rajab Thayav Idhugan ke Saad Thir Trump ki Phon Par Charcah Hone ke baad Ghoshna ki Gayathi",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.7763293356464683,
+   "total_ms": 4553.304999999935,
+   "audio_s": 11.34
+  },
+  {
+   "clip_id": "15964620684926881659",
+   "reference": "पुरुषों को दृढ़ता से नकारें और अपनी बात पर बेहिचक अड़ी रहें (सांस्कृतिक अंतरों के होने या नहीं होने से यह सही नहीं हो जाता!).",
+   "transcript": "Pursau کو Dridhata Senakari, aur apni baat par pehichak adi rahi, Saaskritik antar ke uphone ya nahi hone se, ye shaii nahi hojata.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.8283041351706543,
+   "total_ms": 5203.5449999999255,
+   "audio_s": 12.18
+  },
+  {
+   "clip_id": "1599033818694102662",
+   "reference": "लक्खा सिंह ने छप्पन भोग भजन भी प्रस्तुत किया। गायक, राजू खंडेलवाल उनके साथ थे।",
+   "transcript": "Lakhasigne Chhappan Bhok Bhajan viprasthutkya, Gayak Raju Khandelwal, Unke Saadhte.",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.9642709678325219,
+   "total_ms": 4146.130000000121,
+   "audio_s": 7.44
+  },
+  {
+   "clip_id": "16422572156854030189",
+   "reference": "1963 में बाँध बनने के बाद, मौसमी बाढ़ जो पूरे नदी में तलछट फैला देगी वह रुक गई थी.",
+   "transcript": "1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-1930-",
+   "error": null,
+   "language": "hi",
+   "language_prob": 0.48814567212965587,
+   "total_ms": 26719.325000000186,
+   "audio_s": 8.64
+  }
+ ]
+}

@@ -173,3 +173,44 @@ class RealSpeechStore:
 
     def get(self, run_id: str) -> Optional[Any]:
         return next((r for r in self.runs() if r.run_id == run_id), None)
+
+
+def featured_runs(store: RunStore) -> dict[str, RunEntry]:
+    """The newest measured local run per language policy ("auto", "hint"): the stored baseline.
+
+    Fixture runs, the oracle (reference-text) pipeline check and runs scored by
+    an external understander are never featured.
+    """
+    out: dict[str, RunEntry] = {}
+    for e in store.runs():  # newest first
+        m = e.manifest
+        if (m.source.value != "measured" or m.asr_model == "oracle-reference"
+                or (m.understander or "builtin") != "builtin" or m.language_policy not in ("auto", "hint")):
+            continue
+        out.setdefault(m.language_policy, e)
+    return out
+
+
+def featured_view(entry: RunEntry, store: RunStore) -> dict[str, Any]:
+    """Everything the home page shows about one featured run. Raises RunUnusable like run_overview."""
+    from voicebench.analysis import analyse_run
+
+    ov = run_overview(entry, store)
+    m, scenarios = entry.manifest, ov["scenarios"]
+    by_id = {s.id: s for s in scenarios}
+    analysis = analyse_run(m, scenarios)
+    failures = []
+    for c in analysis["cases"]:
+        if c.passed:
+            continue
+        r = next(x for x in m.results if x.scenario_id == c.scenario_id)
+        failures.append({"case": c, "scenario": by_id[c.scenario_id], "result": r})
+    return {
+        "entry": entry,
+        "summary": ov["summary"],
+        "hash_ok": ov["hash_ok"],
+        "matrix": matrix(m, scenarios),
+        "primary": sorted(analysis["primary"].items(), key=lambda kv: (-kv[1], kv[0])),
+        "failures": failures,
+        "scenarios": scenarios,
+    }
